@@ -73,33 +73,78 @@ def download_snapshot(repo_id: str, cache_dir: Path) -> Path:
     return Path(path)
 
 
+def _is_internal(path: Path, root: Path) -> bool:
+    """True for hugging_face bookkeeping paths such as ``.cache/huggingface/``."""
+    return any(part.startswith(".") for part in path.relative_to(root).parts)
+
+
+def _walk(root: Path, pattern: str) -> list[Path]:
+    return sorted(p for p in root.rglob(pattern) if not _is_internal(p, root))
+
+
 def find_model_dirs(root: Path) -> list[Path]:
     """Directories named ``trainer__plans__configuration``."""
-    return sorted(p for p in root.rglob("*") if p.is_dir() and p.name.count("__") == 2)
+    return [p for p in _walk(root, "*") if p.is_dir() and p.name.count("__") == 2]
 
 
 def find_files(root: Path, name: str) -> list[Path]:
-    return sorted(root.rglob(name))
+    return [p for p in _walk(root, name) if p.is_file()]
 
 
 def find_checkpoints(root: Path) -> list[Path]:
-    found: list[Path] = []
+    found: set[Path] = set()
     for pattern in CHECKPOINT_GLOBS:
-        found.extend(root.rglob(pattern))
-    return sorted(set(found))
+        found.update(p for p in _walk(root, pattern) if p.is_file())
+    return sorted(found)
+
+
+def find_fold_dirs(root: Path) -> list[Path]:
+    return [p for p in _walk(root, "fold_*") if p.is_dir()]
 
 
 def describe_snapshot(snapshot: Path) -> dict[str, list[Path]]:
-    info = {
+    return {
         "model_dirs": find_model_dirs(snapshot),
         "plans": find_files(snapshot, "plans.json"),
         "dataset_json": find_files(snapshot, "dataset.json"),
         "splits": find_files(snapshot, "splits_final.json"),
         "validation_summaries": find_files(snapshot, "summary.json"),
         "checkpoints": find_checkpoints(snapshot),
-        "fold_dirs": sorted(p for p in snapshot.rglob("fold_*") if p.is_dir()),
+        "fold_dirs": find_fold_dirs(snapshot),
     }
-    return info
+
+
+def read_plans(snapshot: Path) -> dict:
+    """Plans identifier and available configurations, when plans.json exists."""
+    matches = find_files(snapshot, "plans.json")
+    if not matches:
+        return {}
+    try:
+        payload = json.loads(matches[0].read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Could not parse %s: %s", matches[0], exc)
+        return {}
+    return {
+        "plans_name": payload.get("plans_name"),
+        "configurations": sorted(payload.get("configurations", {}).keys()),
+        "trainer_hint": payload.get("trainer_name"),
+    }
+
+
+def read_dataset_labels(snapshot: Path) -> dict:
+    matches = find_files(snapshot, "dataset.json")
+    if not matches:
+        return {}
+    try:
+        payload = json.loads(matches[0].read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("Could not parse %s: %s", matches[0], exc)
+        return {}
+    return {
+        "labels": payload.get("labels", {}),
+        "file_ending": payload.get("file_ending"),
+        "numTraining": payload.get("numTraining"),
+    }
 
 
 def _link(src: Path, dst: Path) -> None:
@@ -145,7 +190,7 @@ def install_results_tree(
         else:
             logger.warning("%s not found in snapshot", name)
 
-    for fold_dir in sorted(p for p in snapshot.rglob("fold_*") if p.is_dir()):
+    for fold_dir in find_fold_dirs(snapshot):
         _link(fold_dir, target / fold_dir.name)
 
     return target
@@ -191,6 +236,28 @@ def main() -> int:
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("Could not parse %s: %s", summary, exc)
 
+    plans_info = read_plans(snapshot)
+    dataset_info = read_dataset_labels(snapshot)
+    if plans_info:
+        print(f"\nplans_name  : {plans_info.get('plans_name')}")
+        print(f"configs     : {', '.join(plans_info.get('configurations', [])) or 'unknown'}")
+    if dataset_info:
+        print(f"labels      : {dataset_info.get('labels')}")
+        print(f"file_ending : {dataset_info.get('file_ending')}")
+        print(f"numTraining : {dataset_info.get('numTraining')}")
+
+    plans_name = plans_info.get("plans_name") or args.plans
+    configuration = args.config
+    available = plans_info.get("configurations") or []
+    if available and configuration not in available:
+        logger.warning(
+            "Config %r not in plans (%s); using %s",
+            configuration,
+            ", ".join(available),
+            available[0],
+        )
+        configuration = available[0]
+
     if args.install:
         target = install_results_tree(
             snapshot,
@@ -198,17 +265,20 @@ def main() -> int:
             args.dataset_id,
             args.dataset_name,
             args.trainer,
-            args.plans,
-            args.config,
+            plans_name,
+            configuration,
         )
         print(f"\ninstalled   : {target}")
         print(
             "\nNext — reference prediction:\n"
-            f"  bash scripts/nnunet_predict.sh --input <dir-of-tifs> --output <out-dir> \\\n"
-            f"      --trainer {args.trainer} --plans {args.plans} --config {args.config}"
+            "  bash scripts/nnunet_predict.sh --input <dir-of-tifs> --output <out-dir> \\\n"
+            f"      --trainer {args.trainer} --plans {plans_name} --config {configuration}"
         )
     else:
-        print("\n(inspect-only; re-run with --install to create the nnUNet_results layout)")
+        print(
+            f"\n(inspect-only; re-run with --install to build "
+            f"{args.trainer}__{plans_name}__{configuration})"
+        )
 
     return 0
 
