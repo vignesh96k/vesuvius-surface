@@ -10,9 +10,11 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
-from datasets.io import build_volume_index, list_volume_files, load_volume, read_metadata_csv
-from datasets.schema import (
+from data.io import list_volume_files, load_volume, read_metadata_csv
+from data.schema import (
+    LABEL_IGNORE,
     LABEL_NAMES,
+    LABEL_SURFACE,
     TRAIN_IMAGES_DIRNAME,
     TRAIN_LABELS_DIRNAME,
     TEST_IMAGES_DIRNAME,
@@ -181,11 +183,11 @@ def validate_dataset(
             n = flat.size
             for val, name in LABEL_NAMES.items():
                 entry[f"frac_{name}"] = float((flat == val).sum()) / n
-            labeled = flat != 2
+            labeled = flat != LABEL_IGNORE
             n_lab = int(labeled.sum())
             entry["frac_labeled"] = n_lab / n
             entry["frac_surface_among_labeled"] = (
-                float((flat[labeled] == 1).sum()) / n_lab if n_lab else 0.0
+                float((flat[labeled] == LABEL_SURFACE).sum()) / n_lab if n_lab else 0.0
             )
             if entry["frac_labeled"] < 0.01:
                 report.issues.append(

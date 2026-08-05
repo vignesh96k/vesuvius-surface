@@ -8,9 +8,9 @@ from typing import Any, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
-from analysis.statistics import compute_histogram
-from analysis.utils import mid_planes, save_figure, set_publication_style, stretch_for_display, to_numpy
-from datasets.schema import LABEL_IGNORE, LABEL_SURFACE
+from eda.statistics import compute_histogram
+from eda.utils import mid_planes, save_figure, set_publication_style, stretch_for_display, to_numpy
+from data.schema import LABEL_IGNORE, LABEL_SURFACE
 
 logger = logging.getLogger(__name__)
 set_publication_style()

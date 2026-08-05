@@ -10,10 +10,10 @@ from typing import Any, Optional, Sequence
 import numpy as np
 import pandas as pd
 
-from analysis.statistics import ClassStats, IntensityStats, compute_class_stats, compute_intensity_stats
-from analysis.utils import file_size_bytes, format_bytes, resolve_data_root
-from datasets.io import VolumeRecord, build_volume_index, load_volume, scroll_id_groups
-from datasets.validate import ValidationReport, validate_dataset
+from eda.statistics import ClassStats, IntensityStats, compute_class_stats, compute_intensity_stats
+from eda.utils import file_size_bytes, format_bytes, resolve_data_root
+from data.io import VolumeRecord, build_volume_index, load_volume, scroll_id_groups
+from data.validate import ValidationReport, validate_dataset
 
 logger = logging.getLogger(__name__)
 

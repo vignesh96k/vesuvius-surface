@@ -58,20 +58,29 @@ class RandomFlip3D:
     def __call__(self, sample: dict[str, Any]) -> dict[str, Any]:
         image = sample["image"]
         label = sample.get("label")
-        # image: Tensor (1, D, H, W) or ndarray (D,H,W)/(1,D,H,W)
-        for axis in (1, 2, 3):  # skip channel dim when tensor CHW-like
-            if isinstance(image, torch.Tensor):
-                if image.ndim == 4 and torch.rand(1).item() < self.p:
+        # image: Tensor (1, D, H, W) or ndarray (D, H, W)
+        if isinstance(image, torch.Tensor):
+            if image.ndim != 4:
+                raise ValueError(f"Expected image tensor (1,D,H,W), got {tuple(image.shape)}")
+            for axis in (1, 2, 3):
+                if torch.rand(1).item() < self.p:
                     image = torch.flip(image, dims=(axis,))
                     if label is not None and isinstance(label, torch.Tensor):
                         label = torch.flip(label, dims=(axis - 1,))
-            else:
-                # NumPy path: (D,H,W)
-                ax = axis - 1
+        else:
+            image_np = np.asarray(image)
+            if image_np.ndim == 4 and image_np.shape[0] == 1:
+                image_np = image_np[0]
+            if image_np.ndim != 3:
+                raise ValueError(f"Expected image array (D,H,W), got {image_np.shape}")
+            label_np = None if label is None else np.asarray(label)
+            for ax in (0, 1, 2):
                 if np.random.rand() < self.p:
-                    image = np.flip(image, axis=ax).copy()
-                    if label is not None:
-                        label = np.flip(label, axis=ax).copy()
+                    image_np = np.flip(image_np, axis=ax).copy()
+                    if label_np is not None:
+                        label_np = np.flip(label_np, axis=ax).copy()
+            image = image_np
+            label = label_np
         sample["image"] = image
         if label is not None:
             sample["label"] = label

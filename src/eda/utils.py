@@ -11,13 +11,15 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = ANALYSIS_DIR.parent
-FIGURES_DIR = ANALYSIS_DIR / "figures"
+EDA_DIR = Path(__file__).resolve().parent
+SRC_ROOT = EDA_DIR.parent
+REPO_ROOT = SRC_ROOT.parent
+FIGURES_DIR = EDA_DIR / "figures"
 DEFAULT_DATA_ROOT = REPO_ROOT / "data"
 
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+# Prefer src/ on path so `data` / `eda` / `utils` resolve (not a top-level data/ extract).
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
 ArrayLike = Union[np.ndarray, Any]
 

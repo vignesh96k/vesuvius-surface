@@ -8,8 +8,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from analysis.utils import subsample_for_hist, to_numpy
-from datasets.schema import LABEL_BG, LABEL_IGNORE, LABEL_SURFACE
+from eda.utils import subsample_for_hist, to_numpy
+from data.schema import LABEL_BG, LABEL_IGNORE, LABEL_SURFACE
 
 
 @dataclass(frozen=True)

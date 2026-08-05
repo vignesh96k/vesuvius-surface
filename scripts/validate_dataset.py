@@ -7,12 +7,13 @@ import argparse
 import sys
 from pathlib import Path
 
-# Repo root on sys.path
+# Put src/ on path so `data` / `eda` / `utils` packages resolve.
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-from scripts import validate_dataset
+from data.validate import validate_dataset
 
 
 def parse_args() -> argparse.Namespace:

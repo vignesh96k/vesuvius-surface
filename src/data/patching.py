@@ -8,7 +8,7 @@ from typing import Iterator, Optional, Sequence, Union
 
 import numpy as np
 
-from datasets.schema import LABEL_IGNORE, LABEL_SURFACE
+from data.schema import LABEL_IGNORE, LABEL_SURFACE
 
 logger = logging.getLogger(__name__)
 

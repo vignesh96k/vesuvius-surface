@@ -52,7 +52,7 @@ Encoded integers:
 
 Most masks cover only a subset of the volume; class `2` (and unlabeled regions) are common.
 
-Constants in code: `datasets.schema.LABEL_BG`, `LABEL_SURFACE`, `LABEL_IGNORE`.
+Constants in code: `data.schema.LABEL_BG`, `LABEL_SURFACE`, `LABEL_IGNORE`.
 
 ## Identity rules
 
@@ -84,7 +84,8 @@ Approximate size: **~27 GB**.
 C:\Users\vigne\Downloads\vesuvius-challenge-surface-detection
 ```
 
-Configured as `data.root` in `configs/config.yaml`. Repo `data/` is a Windows junction to the same folder (`786` train image/label pairs).
+Set `data.root` in `configs/config.yaml` to your extract (default on the training host:
+`/mnt/workspace/code/datasets/vesuvius-challenge-surface-detection`).
 
 ## Pipeline outputs (for later modeling)
 

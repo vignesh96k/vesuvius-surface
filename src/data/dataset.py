@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from datasets.io import (
+from data.io import (
     VolumeRecord,
     build_volume_index,
     clear_volume_cache,
@@ -18,14 +18,13 @@ from datasets.io import (
     load_volume_cached,
     probe_volume,
 )
-from datasets.patching import (
+from data.patching import (
     PatchConfig3D,
     PatchCoord3D,
     build_patch_index_3d,
     extract_patch_3d,
 )
-from datasets.schema import LABEL_IGNORE
-from datasets.transforms import normalize_volume
+from data.transforms import normalize_volume
 
 logger = logging.getLogger(__name__)
 

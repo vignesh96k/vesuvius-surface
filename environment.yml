@@ -1,0 +1,22 @@
+name: vesuvius
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - pyyaml
+  - matplotlib
+  - pillow
+  - opencv
+  - jupyter
+  - ipykernel
+  - tifffile
+  - pytorch
+  - torchvision
+  - pip:
+      - kaggle

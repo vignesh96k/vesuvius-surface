@@ -20,7 +20,7 @@ from typing import Iterable, Optional, Sequence
 import numpy as np
 import pandas as pd
 
-from datasets.schema import (
+from data.schema import (
     IMAGE_EXTENSIONS,
     csv_name,
     images_dirname,
@@ -77,16 +77,43 @@ def load_volume(path: str | Path) -> np.ndarray:
     return array
 
 
-def probe_volume(path: str | Path) -> dict[str, object]:
-    """Read shape / dtype / nbytes without keeping the array."""
-    array = load_volume(path)
-    return {
-        "shape": tuple(int(x) for x in array.shape),
-        "dtype": str(array.dtype),
-        "nbytes": int(array.nbytes),
-        "min": float(np.min(array)),
-        "max": float(np.max(array)),
+def probe_volume(
+    path: str | Path,
+    *,
+    include_extrema: bool = False,
+) -> dict[str, object]:
+    """Read shape / dtype / nbytes without keeping the full array in memory.
+
+    Uses TIFF series metadata when possible. Set ``include_extrema=True`` to
+    also load the volume and report min/max (slower).
+    """
+    _require_tifffile()
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(path)
+
+    with tifffile.TiffFile(str(path)) as tif:
+        if not tif.series:
+            raise ValueError(f"No TIFF series found at {path}")
+        series = tif.series[0]
+        shape = tuple(int(x) for x in series.shape)
+        dtype = np.dtype(series.dtype)
+
+    if len(shape) == 2:
+        shape = (1, shape[0], shape[1])
+    if len(shape) != 3:
+        raise ValueError(f"Expected 2D/3D volume at {path}, got shape {shape}")
+
+    info: dict[str, object] = {
+        "shape": shape,
+        "dtype": str(dtype),
+        "nbytes": int(np.prod(shape) * dtype.itemsize),
     }
+    if include_extrema:
+        array = load_volume(path)
+        info["min"] = float(np.min(array))
+        info["max"] = float(np.max(array))
+    return info
 
 
 @lru_cache(maxsize=8)

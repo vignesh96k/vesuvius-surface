@@ -15,8 +15,8 @@ from typing import Any, Optional, Sequence
 import numpy as np
 import pandas as pd
 
-from analysis.utils import subsample_for_hist, to_numpy
-from datasets.schema import LABEL_IGNORE, LABEL_SURFACE
+from eda.utils import subsample_for_hist, to_numpy
+from data.schema import LABEL_IGNORE, LABEL_SURFACE
 
 
 @dataclass(frozen=True)
@@ -75,7 +75,7 @@ def compute_imbalance_report_3d(
     min_labeled_ratio: float = 0.1,
 ) -> tuple[ImbalanceReport3D, np.ndarray]:
     """Voxel + patch surface-fraction statistics."""
-    from datasets.patching import PatchConfig3D, build_patch_index_3d, extract_patch_3d
+    from data.patching import PatchConfig3D, build_patch_index_3d, extract_patch_3d
 
     lab = to_numpy(label)
     labeled = lab != LABEL_IGNORE

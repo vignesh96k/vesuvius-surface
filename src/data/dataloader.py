@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any, Optional
 
 import torch
@@ -74,9 +73,9 @@ def build_dataloader(
 
 def build_dataloaders_from_config(config: dict[str, Any]) -> dict[str, DataLoader]:
     """Build train/val loaders from merged experiment config."""
-    from datasets.dataset import SurfacePatchDataset
-    from datasets.patching import PatchConfig3D
-    from datasets.transforms import build_transforms
+    from data.dataset import SurfacePatchDataset
+    from data.patching import PatchConfig3D
+    from data.transforms import build_transforms
 
     data_cfg = config.get("data", {})
     patch_size = data_cfg.get("patch_size", [128, 128, 128])
@@ -106,7 +105,7 @@ def build_dataloaders_from_config(config: dict[str, Any]) -> dict[str, DataLoade
     train_scrolls = data_cfg.get("train_scroll_ids")
     # If val scrolls are set but train scrolls are not, train = all except val.
     if train_scrolls is None and val_scrolls:
-        from datasets.io import build_volume_index
+        from data.io import build_volume_index
 
         all_recs = build_volume_index(root, split="train")
         all_scrolls = sorted({r.scroll_id for r in all_recs})
@@ -159,5 +158,4 @@ def build_dataloaders_from_config(config: dict[str, Any]) -> dict[str, DataLoade
             "Prefer scroll-level holdout for Surface Detection."
         )
 
-    _ = Path(root)  # silence unused in some lint setups
     return loaders
