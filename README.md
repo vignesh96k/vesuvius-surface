@@ -83,3 +83,64 @@ export nnUNet_preprocessed=/mnt/workspace/code/nnUNet_preprocessed
 export nnUNet_results=/mnt/workspace/code/nnUNet_results
 nnUNetv2_train 100 3d_fullres 0
 ```
+
+## Reference baseline — public 1st-place checkpoint
+
+`scrollprize/surface_m7_nnunet` is the nnU-Net component of the winning
+ensemble, released under Apache-2.0. We use it as a reference score and as a
+source of prediction maps for post-processing development — not as our own
+trained model.
+
+```bash
+pip install huggingface_hub
+
+# Inspect first (reports whether a splits_final.json ships with it):
+python scripts/fetch_pretrained_m7.py
+
+# Then expose it as an nnUNet_results tree:
+python scripts/fetch_pretrained_m7.py --install
+```
+
+### Leakage-free evaluation subset
+
+The checkpoint is `fold_0` of a 786-case dataset using our case ids. nnU-Net
+generates folds deterministically (`KFold(n_splits=5, shuffle=True,
+random_state=12345)` over sorted case ids), so the cases it never trained on
+can be recovered:
+
+```bash
+python scripts/nnunet_folds.py \
+  --dataset-dir /mnt/workspace/code/nnUNet_raw/Dataset100_VesuviusSurface \
+  --fold 0 \
+  --out reports/m7_holdout.json
+```
+
+Prefer an authoritative split file when the snapshot ships one:
+
+```bash
+python scripts/nnunet_folds.py --splits-json /path/to/splits_final.json
+```
+
+Any score for the public checkpoint should be reported on this subset only.
+
+## Step 4 — inference
+
+```bash
+bash scripts/nnunet_predict.sh \
+  --input /mnt/workspace/code/nnUNet_raw/Dataset100_VesuviusSurface/imagesTs \
+  --output /mnt/workspace/code/predictions/m7_test \
+  --plans nnUNetResEncUNetLPlans
+```
+
+Probability maps are saved by default (`--save_probabilities`) so thresholds
+and post-processing can be tuned offline rather than through leaderboard
+submissions.
+
+## Credits
+
+- nnU-Net v2 — [MIC-DKFZ/nnUNet](https://github.com/MIC-DKFZ/nnUNet)
+- Pretrained `surface_m7_nnunet` weights — [scrollprize on Hugging Face](https://huggingface.co/scrollprize/surface_m7_nnunet), from the
+  [1st-place solution](https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su)
+  by Tony Li, OzanM., Yiheng Wang and PaulG
+- Post-processing design follows that writeup (component filtering, per-sheet
+  closing, height-map patching, 1-voxel hole plugging, `binary_fill_holes`)
