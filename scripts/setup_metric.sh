@@ -86,9 +86,21 @@ if [[ "$INSPECT_ONLY" -eq 1 ]]; then
   exit 0
 fi
 
-for tool in git cmake make python; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "ERROR: '$tool' not found on PATH"; exit 1; }
+MISSING=()
+for tool in git cmake make python g++; do
+  command -v "$tool" >/dev/null 2>&1 || MISSING+=("$tool")
 done
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  echo "ERROR: missing build tools: ${MISSING[*]}"
+  echo
+  echo "The TopoScore term compiles the Betti-Matching-3D C++ submodule, so a"
+  echo "toolchain is required. Inside a conda env:"
+  echo "  conda install -y -c conda-forge cmake ninja make git compilers"
+  echo "Or system-wide (Debian/Ubuntu):"
+  echo "  apt-get update && apt-get install -y build-essential cmake git"
+  exit 1
+fi
 
 if ! command -v kaggle >/dev/null 2>&1; then
   echo "ERROR: kaggle CLI not found. Install it and add API credentials:"
