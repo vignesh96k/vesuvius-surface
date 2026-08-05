@@ -83,9 +83,19 @@ def main() -> int:
     print(f"source      : {report.source}")
     print(f"train cases : {report.n_train}")
     print(f"val cases   : {report.n_val}")
-    print("val scrolls :")
-    for scroll, count in report.scroll_counts.items():
-        print(f"  {scroll:>10} : {count}")
+    print(f"{'scroll':>10}  {'val':>5} {'total':>6}  {'val share':>9}")
+    for scroll, total in report.total_scroll_counts.items():
+        in_val = report.scroll_counts.get(scroll, 0)
+        share = in_val / total if total else 0.0
+        print(f"  {scroll:>8}  {in_val:>5} {total:>6}  {share:>8.1%}")
+
+    missing = report.missing_scrolls()
+    if missing:
+        print(
+            f"\nWARNING: {len(missing)} scroll(s) absent from this validation set: "
+            f"{', '.join(missing)}.\n"
+            "         A score on this subset says nothing about those scrolls."
+        )
 
     if report.source == "reconstructed":
         print(

@@ -36,6 +36,11 @@ class FoldReport:
     val_case_ids: list[str]
     source: str
     scroll_counts: dict[str, int]
+    total_scroll_counts: dict[str, int]
+
+    def missing_scrolls(self) -> list[str]:
+        """Scrolls present in the dataset but absent from this validation set."""
+        return sorted(s for s in self.total_scroll_counts if not self.scroll_counts.get(s))
 
 
 def list_case_ids(dataset_dir: str | Path) -> list[str]:
@@ -171,6 +176,7 @@ def describe_fold(
         raise IndexError(f"fold {fold} requested but only {len(splits)} folds available")
 
     val_ids = list(splits[fold]["val"])
+    all_ids = list(splits[fold]["train"]) + val_ids
     scroll_groups = load_scroll_groups(dataset_dir / "scroll_groups.json")
     return FoldReport(
         fold=fold,
@@ -179,6 +185,7 @@ def describe_fold(
         val_case_ids=val_ids,
         source=source,
         scroll_counts=scroll_distribution(val_ids, scroll_groups),
+        total_scroll_counts=scroll_distribution(all_ids, scroll_groups),
     )
 
 
@@ -196,6 +203,8 @@ def write_holdout_manifest(
         "n_train": report.n_train,
         "n_val": report.n_val,
         "scroll_counts": report.scroll_counts,
+        "total_scroll_counts": report.total_scroll_counts,
+        "missing_scrolls": report.missing_scrolls(),
         "val_case_ids": report.val_case_ids,
         "note": note,
     }
