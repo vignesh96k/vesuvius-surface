@@ -22,14 +22,16 @@ env/
 .env
 
 # Data / outputs (large local artifacts)
-data/
+# Only ignore repo-root dataset extract, not the src/data/ Python package.
+/data/
 outputs/
 checkpoints/
 cache/
 analysis/figures/
-nnUNet_raw/
-nnUNet_preprocessed/
-nnUNet_results/
+/nnUNet_raw/
+/nnUNet_preprocessed/
+/nnUNet_results/
+src/eda/figures/
 
 # OS / IDE
 .DS_Store
