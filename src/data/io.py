@@ -22,6 +22,8 @@ import pandas as pd
 
 from data.schema import (
     IMAGE_EXTENSIONS,
+    TRAIN_IMAGES_DIRNAME,
+    TRAIN_LABELS_DIRNAME,
     csv_name,
     images_dirname,
     label_path,
@@ -197,7 +199,13 @@ def build_volume_index(
     img_dir_name = images_dirname("test" if split.lower() == "test" else "train")
     lab_dir_name = labels_dirname("test" if split.lower() == "test" else "train")
 
+    deprecated_images = list_volume_files(root / f"deprecated_{TRAIN_IMAGES_DIRNAME}")
+    deprecated_labels = list_volume_files(root / f"deprecated_{TRAIN_LABELS_DIRNAME}")
+
     records: list[VolumeRecord] = []
+    n_deprecated = 0
+    n_missing_image = 0
+    n_missing_label = 0
     for row in meta.itertuples(index=False):
         vid = str(row.id)
         sid = str(row.scroll_id)
@@ -206,10 +214,28 @@ def build_volume_index(
         if lab_dir_name is not None:
             lab = label_path(root, vid)
         if not img.exists():
-            logger.warning("Missing image for id=%s expected %s", vid, img)
+            if vid in deprecated_images:
+                n_deprecated += 1
+                logger.debug(
+                    "Skipping deprecated id=%s (under deprecated_%s/)",
+                    vid,
+                    TRAIN_IMAGES_DIRNAME,
+                )
+            else:
+                n_missing_image += 1
+                logger.warning("Missing image for id=%s expected %s", vid, img)
             continue
         if require_label and (lab is None or not lab.exists()):
-            logger.warning("Missing label for id=%s expected %s", vid, lab)
+            if vid in deprecated_labels:
+                n_deprecated += 1
+                logger.debug(
+                    "Skipping deprecated id=%s (under deprecated_%s/)",
+                    vid,
+                    TRAIN_LABELS_DIRNAME,
+                )
+            else:
+                n_missing_label += 1
+                logger.warning("Missing label for id=%s expected %s", vid, lab)
             continue
         records.append(
             VolumeRecord(
@@ -225,6 +251,19 @@ def build_volume_index(
         raise FileNotFoundError(
             f"No volumes indexed under {root} (split={split}). "
             "Expected train.csv + train_images/*.tif (+ train_labels for train)."
+        )
+    if n_deprecated:
+        logger.info(
+            "Skipped %d deprecated train.csv id(s) not present under %s/",
+            n_deprecated,
+            img_dir_name,
+        )
+    if n_missing_image or n_missing_label:
+        logger.warning(
+            "Skipped %d missing image(s) and %d missing label(s) for split=%s",
+            n_missing_image,
+            n_missing_label,
+            split,
         )
     logger.info("Indexed %d volume(s) for split=%s under %s", len(records), split, root)
     return records
