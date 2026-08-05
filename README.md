@@ -43,3 +43,23 @@ python scripts/export_nnunet.py \
 ```
 
 This builds `Dataset100_VesuviusSurface/` with `dataset.json`, symlinked `imagesTr`/`labelsTr`, and `scroll_groups.json`.
+
+## Step 2 — nnU-Net plan & preprocess
+
+```bash
+# After a successful full export:
+python scripts/export_nnunet.py --mode symlink
+
+# Install + plan (optional integrity check):
+bash scripts/nnunet_setup_and_preprocess.sh --verify
+```
+
+Or manually:
+
+```bash
+export nnUNet_raw=/mnt/workspace/code/nnUNet_raw
+export nnUNet_preprocessed=/mnt/workspace/code/nnUNet_preprocessed
+export nnUNet_results=/mnt/workspace/code/nnUNet_results
+pip install nnunetv2
+nnUNetv2_plan_and_preprocess -d 100 --verify_dataset_integrity
+```
