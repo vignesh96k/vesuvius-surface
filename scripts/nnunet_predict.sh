@@ -18,6 +18,7 @@ CONFIG="${CONFIG:-3d_fullres}"
 TRAINER="${TRAINER:-nnUNetTrainer}"
 PLANS="${PLANS:-nnUNetPlans}"
 FOLD="${FOLD:-0}"
+CHECKPOINT="${CHECKPOINT:-}"
 INPUT=""
 OUTPUT=""
 SAVE_PROBS=1
@@ -34,10 +35,11 @@ while [[ $# -gt 0 ]]; do
     --plans) PLANS="$2"; shift 2 ;;
     --config) CONFIG="$2"; shift 2 ;;
     --fold) FOLD="$2"; shift 2 ;;
+    --checkpoint) CHECKPOINT="$2"; shift 2 ;;
     --no-probabilities) SAVE_PROBS=0; shift ;;
     *)
       echo "Unknown arg: $1"
-      echo "Usage: bash scripts/nnunet_predict.sh --input DIR --output DIR [--trainer T] [--plans P] [--config C] [--fold F] [--no-probabilities]"
+      echo "Usage: bash scripts/nnunet_predict.sh --input DIR --output DIR [--trainer T] [--plans P] [--config C] [--fold F] [--checkpoint NAME] [--no-probabilities]"
       exit 1
       ;;
   esac
@@ -61,12 +63,36 @@ if [[ ! -d "$MODEL_DIR" ]]; then
   exit 1
 fi
 
+# Published checkpoints often ship only checkpoint_best.pth, while nnU-Net
+# defaults to checkpoint_final.pth. Pick whichever is actually present.
+FOLD_DIR="$MODEL_DIR/fold_$FOLD"
+if [[ -z "$CHECKPOINT" ]]; then
+  if [[ -f "$FOLD_DIR/checkpoint_final.pth" ]]; then
+    CHECKPOINT="checkpoint_final.pth"
+  elif [[ -f "$FOLD_DIR/checkpoint_best.pth" ]]; then
+    CHECKPOINT="checkpoint_best.pth"
+  else
+    echo "ERROR: no checkpoint found in $FOLD_DIR"
+    echo "Available:"
+    ls -1 "$FOLD_DIR" 2>/dev/null || echo "  (fold dir missing)"
+    exit 1
+  fi
+fi
+
+if [[ ! -f "$FOLD_DIR/$CHECKPOINT" ]]; then
+  echo "ERROR: checkpoint not found: $FOLD_DIR/$CHECKPOINT"
+  echo "Available:"
+  ls -1 "$FOLD_DIR" 2>/dev/null || echo "  (fold dir missing)"
+  exit 1
+fi
+
 mkdir -p "$OUTPUT"
 
-echo "model  = $MODEL_DIR"
-echo "fold   = $FOLD"
-echo "input  = $INPUT"
-echo "output = $OUTPUT"
+echo "model      = $MODEL_DIR"
+echo "fold       = $FOLD"
+echo "checkpoint = $CHECKPOINT"
+echo "input      = $INPUT"
+echo "output     = $OUTPUT"
 
 PROB_FLAG=()
 if [[ "$SAVE_PROBS" -eq 1 ]]; then
@@ -81,6 +107,7 @@ nnUNetv2_predict \
   -f "$FOLD" \
   -tr "$TRAINER" \
   -p "$PLANS" \
+  -chk "$CHECKPOINT" \
   "${PROB_FLAG[@]}"
 
 echo
