@@ -52,6 +52,7 @@ python scripts/export_nnunet.py --mode symlink
 
 # Install + plan (optional integrity check):
 bash scripts/nnunet_setup_and_preprocess.sh --verify
+# defaults to -c 3d_fullres (use --all to also preprocess 2d)
 ```
 
 Or manually:
@@ -61,5 +62,5 @@ export nnUNet_raw=/mnt/workspace/code/nnUNet_raw
 export nnUNet_preprocessed=/mnt/workspace/code/nnUNet_preprocessed
 export nnUNet_results=/mnt/workspace/code/nnUNet_results
 pip install nnunetv2
-nnUNetv2_plan_and_preprocess -d 100 --verify_dataset_integrity
+nnUNetv2_plan_and_preprocess -d 100 -c 3d_fullres --verify_dataset_integrity
 ```
