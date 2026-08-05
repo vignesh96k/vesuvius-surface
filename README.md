@@ -64,3 +64,22 @@ export nnUNet_results=/mnt/workspace/code/nnUNet_results
 pip install nnunetv2
 nnUNetv2_plan_and_preprocess -d 100 -c 3d_fullres --verify_dataset_integrity
 ```
+
+## Step 3 — baseline train
+
+```bash
+# Default nnU-Net fold 0 split:
+bash scripts/nnunet_train_baseline.sh
+
+# Recommended: hold out one scroll from EDA (e.g. 26002):
+bash scripts/nnunet_train_baseline.sh --scroll-val 26002
+```
+
+Or manually:
+
+```bash
+export nnUNet_raw=/mnt/workspace/code/nnUNet_raw
+export nnUNet_preprocessed=/mnt/workspace/code/nnUNet_preprocessed
+export nnUNet_results=/mnt/workspace/code/nnUNet_results
+nnUNetv2_train 100 3d_fullres 0
+```
