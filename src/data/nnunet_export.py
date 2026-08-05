@@ -72,6 +72,64 @@ def _link_or_copy(src: Path, dst: Path, mode: LinkMode) -> None:
         os.symlink(src, dst)
 
 
+def materialize_case_subset(
+    dataset_dir: str | Path,
+    case_ids: Sequence[str],
+    output_dir: str | Path,
+    *,
+    mode: LinkMode = "symlink",
+    include_labels: bool = True,
+) -> tuple[Path, Optional[Path]]:
+    """Build a standalone ``images/`` (+ ``labels/``) folder for a case subset.
+
+    Used to run inference over an evaluation holdout without pointing nnU-Net
+    at the full ``imagesTr``. Returns ``(images_dir, labels_dir_or_None)``.
+    """
+    dataset_dir = Path(dataset_dir)
+    output_dir = Path(output_dir)
+    images_src = dataset_dir / "imagesTr"
+    labels_src = dataset_dir / "labelsTr"
+    images_dst = output_dir / "images"
+    labels_dst = output_dir / "labels"
+
+    images_dst.mkdir(parents=True, exist_ok=True)
+    if include_labels:
+        labels_dst.mkdir(parents=True, exist_ok=True)
+
+    n_images = 0
+    n_labels = 0
+    missing: list[str] = []
+
+    for raw_id in case_ids:
+        case_id = case_id_from_volume_id(raw_id)
+        image = images_src / image_tr_name(case_id)
+        if not image.exists():
+            missing.append(case_id)
+            continue
+        _link_or_copy(image, images_dst / image.name, mode)
+        n_images += 1
+
+        if include_labels:
+            label = labels_src / label_tr_name(case_id)
+            if label.exists():
+                _link_or_copy(label, labels_dst / label.name, mode)
+                n_labels += 1
+            else:
+                logger.warning("Label missing for case %s", case_id)
+
+    if missing:
+        logger.warning("%d case(s) had no image and were skipped: %s", len(missing), missing[:5])
+
+    logger.info(
+        "Subset ready: %d image(s), %d label(s) -> %s (mode=%s)",
+        n_images,
+        n_labels,
+        output_dir,
+        mode,
+    )
+    return images_dst, (labels_dst if include_labels else None)
+
+
 def build_dataset_json(
     *,
     name: str,

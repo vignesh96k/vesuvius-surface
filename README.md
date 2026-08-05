@@ -123,6 +123,24 @@ python scripts/nnunet_folds.py --splits-json /path/to/splits_final.json
 
 Any score for the public checkpoint should be reported on this subset only.
 
+The snapshot ships no `splits_final.json`, so this membership is inferred from
+nnU-Net's default seed rather than read from the source. It is consistent with
+the checkpoint's `dataset.json` (`numTraining: 786`, labels `{background: 0,
+surface: 1, ignore: 2}`, `file_ending: .tif`), which matches our export, but it
+remains an assumption.
+
+The reconstructed fold 0 is also unbalanced across scrolls — scroll 44430 gets
+zero validation cases and 34117 takes half the subset — so report per-scroll
+metrics rather than a single pooled number.
+
+### Build the holdout subset
+
+```bash
+python scripts/make_subset.py \
+  --manifest reports/m7_holdout.json \
+  --output /mnt/workspace/code/subsets/m7_holdout
+```
+
 ## Step 4 — inference
 
 ```bash
