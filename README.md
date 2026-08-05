@@ -32,3 +32,14 @@ python scripts/validate_dataset.py --data-root /path/to/vesuvius-challenge-surfa
 ```
 
 Optional: `--max-volumes N` for a quick scan, `--out reports/` to write CSVs.
+
+## Step 1 — Export to nnU-Net
+
+```bash
+python scripts/export_nnunet.py \
+  --data-root /mnt/workspace/code/datasets/vesuvius-challenge-surface-detection \
+  --output-root /mnt/workspace/code/nnUNet_raw \
+  --mode symlink
+```
+
+This builds `Dataset100_VesuviusSurface/` with `dataset.json`, symlinked `imagesTr`/`labelsTr`, and `scroll_groups.json`.

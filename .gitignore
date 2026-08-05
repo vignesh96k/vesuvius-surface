@@ -27,6 +27,9 @@ outputs/
 checkpoints/
 cache/
 analysis/figures/
+nnUNet_raw/
+nnUNet_preprocessed/
+nnUNet_results/
 
 # OS / IDE
 .DS_Store

@@ -98,13 +98,28 @@ Ignore index `2` is excluded from valid-patch filtering and should be ignored in
 
 **Note:** `train.csv` lists **806** ids, but only **786** have files under `train_images/` / `train_labels/`. The other **20** live under `deprecated_train_*` (competition-retired samples; one of them is also the public `test_images` volume). Training / indexing already skips missing files — treat those CSV rows as deprecated, not as a broken download.
 
-## Mapping toward nnU-Net (later)
+## Mapping toward nnU-Net
 
-| This repo | nnU-Net |
-|-----------|---------|
-| `train_images/<id>.tif` | `imagesTr/<id>_0000.nii.gz` (or TIFF via custom IO) |
-| `train_labels/<id>.tif` | `labelsTr/<id>.nii.gz` |
-| label `2` | nnU-Net **ignore** label |
-| `scroll_id` | fold grouping / custom split JSON |
+| This repo | nnU-Net raw |
+|-----------|-------------|
+| `train_images/<id>.tif` | `imagesTr/<id>_0000.tif` (symlink by default) |
+| `train_labels/<id>.tif` | `labelsTr/<id>.tif` |
+| label `2` | nnU-Net **ignore** label (`"ignore": 2` in `dataset.json`) |
+| `scroll_id` | `scroll_groups.json` → optional `splits_final.json` |
 
-No nnU-Net conversion is implemented in this pass; case IDs and ignore semantics are intentionally aligned.
+### Export (step 1)
+
+```bash
+python scripts/export_nnunet.py \
+  --data-root /mnt/workspace/code/datasets/vesuvius-challenge-surface-detection \
+  --output-root /mnt/workspace/code/nnUNet_raw \
+  --mode symlink
+
+# Smoke test (few volumes):
+python scripts/export_nnunet.py --max-train-volumes 5 --mode symlink
+
+# Also write a scroll holdout split:
+python scripts/export_nnunet.py --val-scroll-ids 26002 --mode symlink
+```
+
+Creates `Dataset100_VesuviusSurface/` under `--output-root`.
