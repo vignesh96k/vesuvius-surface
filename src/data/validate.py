@@ -23,6 +23,11 @@ from data.schema import (
 
 logger = logging.getLogger(__name__)
 
+try:
+    from tqdm import tqdm
+except ImportError:  # pragma: no cover
+    tqdm = None  # type: ignore[assignment]
+
 
 @dataclass
 class ValidationIssue:
@@ -81,6 +86,7 @@ def validate_dataset(
     split: str = "train",
     max_volumes_to_scan: Optional[int] = None,
     check_label_values: bool = True,
+    show_progress: bool = True,
 ) -> ValidationReport:
     """Validate CSV / image / label consistency for Surface Detection.
 
@@ -115,23 +121,80 @@ def validate_dataset(
                 ValidationIssue("warning", orphan, f"Label on disk not listed in CSV: {disk_labels[orphan]}")
             )
 
+    rows_meta = list(meta.itertuples(index=False))
+    if max_volumes_to_scan is not None:
+        rows_meta = rows_meta[: max(0, int(max_volumes_to_scan))]
+
+    logger.info(
+        "Validating %d / %d volume(s) under %s (split=%s)",
+        len(rows_meta),
+        report.n_csv_rows,
+        root,
+        split,
+    )
+
+    iterator: Any = rows_meta
+    if show_progress and tqdm is not None:
+        iterator = tqdm(rows_meta, desc=f"validate:{split}", unit="vol")
+    elif show_progress:
+        print(
+            f"Validating {len(rows_meta)} volumes "
+            f"(install tqdm for a progress bar: pip install tqdm)",
+            flush=True,
+        )
+
     rows: list[dict[str, Any]] = []
-    scanned = 0
-    for row in meta.itertuples(index=False):
-        if max_volumes_to_scan is not None and scanned >= max_volumes_to_scan:
-            break
+    deprecated_img_dir = root / f"deprecated_{TRAIN_IMAGES_DIRNAME}"
+    deprecated_lab_dir = root / f"deprecated_{TRAIN_LABELS_DIRNAME}"
+    deprecated_images = list_volume_files(deprecated_img_dir)
+    deprecated_labels = list_volume_files(deprecated_lab_dir)
+    test_images = list_volume_files(root / TEST_IMAGES_DIRNAME)
+
+    for i, row in enumerate(iterator, start=1):
         vid = str(row.id)
         sid = str(row.scroll_id)
-        scanned += 1
+
+        if show_progress and tqdm is None and (i == 1 or i % 10 == 0 or i == len(rows_meta)):
+            print(f"  [{i}/{len(rows_meta)}] {vid}", flush=True)
 
         img_p = disk_images.get(vid)
         if img_p is None:
-            report.issues.append(ValidationIssue("error", vid, f"Missing image under {img_dir}"))
+            if vid in deprecated_images:
+                where = f"deprecated_{TRAIN_IMAGES_DIRNAME}/"
+                if vid in test_images:
+                    where += f" and {TEST_IMAGES_DIRNAME}/"
+                report.issues.append(
+                    ValidationIssue(
+                        "warning",
+                        vid,
+                        f"Listed in train.csv but moved out of {TRAIN_IMAGES_DIRNAME}/ "
+                        f"(found under {where}). Competition deprecated sample — skip for training.",
+                    )
+                )
+            elif vid in test_images:
+                report.issues.append(
+                    ValidationIssue(
+                        "warning",
+                        vid,
+                        f"Listed in train.csv but image only exists under {TEST_IMAGES_DIRNAME}/.",
+                    )
+                )
+            else:
+                report.issues.append(ValidationIssue("error", vid, f"Missing image under {img_dir}"))
             continue
 
         lab_p = disk_labels.get(vid) if require_label else None
         if require_label and lab_p is None:
-            report.issues.append(ValidationIssue("error", vid, f"Missing label under {lab_dir}"))
+            if vid in deprecated_labels:
+                report.issues.append(
+                    ValidationIssue(
+                        "warning",
+                        vid,
+                        f"Listed in train.csv but label only under deprecated_{TRAIN_LABELS_DIRNAME}/.",
+                    )
+                )
+            else:
+                report.issues.append(ValidationIssue("error", vid, f"Missing label under {lab_dir}"))
             continue
 
         try:

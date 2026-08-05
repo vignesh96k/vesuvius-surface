@@ -16,6 +16,7 @@ dependencies:
   - jupyter
   - ipykernel
   - tifffile
+  - tqdm
   - pytorch
   - torchvision
   - pip:

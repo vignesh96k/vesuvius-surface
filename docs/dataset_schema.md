@@ -96,6 +96,8 @@ Set `data.root` in `configs/config.yaml` to your extract (default on the trainin
 
 Ignore index `2` is excluded from valid-patch filtering and should be ignored in loss/metrics later.
 
+**Note:** `train.csv` lists **806** ids, but only **786** have files under `train_images/` / `train_labels/`. The other **20** live under `deprecated_train_*` (competition-retired samples; one of them is also the public `test_images` volume). Training / indexing already skips missing files — treat those CSV rows as deprecated, not as a broken download.
+
 ## Mapping toward nnU-Net (later)
 
 | This repo | nnU-Net |

@@ -37,10 +37,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    print(
+        f"Scanning split={args.split} under {args.data_root}"
+        + (f" (max_volumes={args.max_volumes})" if args.max_volumes else " (all volumes)"),
+        flush=True,
+    )
     report = validate_dataset(
         args.data_root,
         split=args.split,
         max_volumes_to_scan=args.max_volumes,
+        show_progress=True,
     )
     print(report.summary())
 
