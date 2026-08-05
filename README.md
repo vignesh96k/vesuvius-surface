@@ -150,13 +150,38 @@ bash scripts/nnunet_predict.sh \
   --plans nnUNetResEncUNetLPlans
 ```
 
+Published checkpoints often ship only `checkpoint_best.pth` while nnU-Net
+defaults to `checkpoint_final.pth`; the wrapper detects which exists and
+passes `-chk` accordingly (override with `--checkpoint NAME`).
+
 Probability maps are saved by default (`--save_probabilities`) so thresholds
 and post-processing can be tuned offline rather than through leaderboard
 submissions.
 
+## Step 5 — local scoring
+
+The competition score is **not** volumetric Dice:
+
+```text
+Score = 0.30 * TopoScore + 0.35 * SurfaceDice@2.0 + 0.35 * VOI_score
+```
+
+Topology and instance structure carry 0.65 of the weight. See
+[docs/metric.md](docs/metric.md) for the full definition and why it drives the
+post-processing strategy.
+
+Install the official implementation (needs kaggle CLI credentials, git, cmake
+and a C++ toolchain for the Betti-Matching-3D submodule):
+
+```bash
+bash scripts/setup_metric.sh
+```
+
 ## Credits
 
 - nnU-Net v2 — [MIC-DKFZ/nnUNet](https://github.com/MIC-DKFZ/nnUNet)
+- Official metric implementation — Kaggle dataset `sohier/vesuvius-metric-resources`
+  (wraps Betti-Matching-3D)
 - Pretrained `surface_m7_nnunet` weights — [scrollprize on Hugging Face](https://huggingface.co/scrollprize/surface_m7_nnunet), from the
   [1st-place solution](https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su)
   by Tony Li, OzanM., Yiheng Wang and PaulG
