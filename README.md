@@ -16,6 +16,14 @@ docs/         # dataset schema notes
 
 Import packages as `data`, `eda`, and `utils` with `src/` on `PYTHONPATH` (scripts do this automatically).
 
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [research_log.md](research_log.md) | Running narrative: decisions, evidence, corrections, open questions |
+| [docs/metric.md](docs/metric.md) | Competition metric and why it drives the approach |
+| [docs/dataset_schema.md](docs/dataset_schema.md) | Label encoding, paths, deprecated samples |
+
 ## Setup
 
 ```bash
