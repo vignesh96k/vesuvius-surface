@@ -123,11 +123,39 @@ python scripts/nnunet_folds.py --splits-json /path/to/splits_final.json
 
 Any score for the public checkpoint should be reported on this subset only.
 
-The snapshot ships no `splits_final.json`, so this membership is inferred from
-nnU-Net's default seed rather than read from the source. It is consistent with
-the checkpoint's `dataset.json` (`numTraining: 786`, labels `{background: 0,
-surface: 1, ignore: 2}`, `file_ending: .tif`), which matches our export, but it
-remains an assumption.
+### How far this is actually verified
+
+The snapshot ships no `splits_final.json`, so membership is **inferred**, not
+read. Be precise about what is established:
+
+| Claim | Status |
+|---|---|
+| Checkpoint is `fold_0` | Stated on the model card |
+| Same dataset, 786 cases, same labels / `.tif` | Confirmed via `dataset.json` |
+| Our sorted case order equals theirs | Testable — `scripts/verify_split.py` |
+| They used the *default* seeded split | **Assumed**, not verifiable from the snapshot |
+
+Two checks are available.
+
+**Structural.** `dataset_fingerprint.json` stores per-case geometry in sorted
+case-id order. If their sequence matches ours, the K-fold assignment is
+identical:
+
+```bash
+python scripts/verify_split.py
+```
+
+**Empirical.** A model scores higher on data it trained on. Build a sample of
+the cases we claim were in training and compare against the holdout — if the
+two score the same, our split assumption is probably wrong:
+
+```bash
+python scripts/make_subset.py --manifest reports/m7_holdout.json \
+  --split train --sample 20 --output /mnt/workspace/code/subsets/m7_trainprobe
+```
+
+Until both agree, treat holdout scores as a **relative** basis for comparing
+our own configurations, not as a leaderboard estimate.
 
 The reconstructed fold 0 is also unbalanced across scrolls — scroll 44430 gets
 zero validation cases and 34117 takes half the subset — so report per-scroll
