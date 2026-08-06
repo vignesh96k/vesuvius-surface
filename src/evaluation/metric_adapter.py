@@ -1,16 +1,19 @@
-"""Thin adapter over the official competition metric package.
+"""Thin adapter over the official competition metric package (`topometrics`).
 
-The scoring code ships as the Kaggle dataset `sohier/vesuvius-metric-resources`
-(install via `scripts/setup_metric.sh`). Everything that depends on its exact
-API is isolated here so the rest of the harness stays stable.
+Installed from the Kaggle dataset `sohier/vesuvius-metric-resources` via
+`scripts/setup_metric.sh`. Everything that depends on its API lives here.
 
-    Score = 0.30 * TopoScore + 0.35 * SurfaceDice@2.0 + 0.35 * VOI_score
+    Score = 0.30*TopoScore + 0.35*SurfaceDice@2.0 + 0.35*VOI_score
+
+We call `compute_leaderboard_score` with its own defaults and override nothing,
+so local numbers stay in parity with the package. In particular the package
+handles the ignore class itself (`ignore_label=2`) — do not pre-mask labels.
 """
 
 from __future__ import annotations
 
 import importlib
-from typing import Final
+from typing import Any, Final, Optional
 
 import numpy as np
 
@@ -19,8 +22,6 @@ METRIC_WEIGHTS: Final[dict[str, float]] = {
     "surface_dice": 0.35,
     "voi_score": 0.35,
 }
-
-SURFACE_DICE_TAU: Final[float] = 2.0
 
 _CANDIDATE_MODULES: Final[tuple[str, ...]] = (
     "topometrics",
@@ -47,20 +48,42 @@ def load_metric_module():
     )
 
 
-def score_pair(prediction: np.ndarray, ground_truth: np.ndarray) -> dict[str, float]:
-    """Score one prediction/ground-truth pair of binary volumes.
+def _as_float(value: Any) -> Optional[float]:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
-    Returns the three sub-scores; the caller combines them via
-    :func:`evaluation.harness.composite_score`.
+
+def score_pair(
+    prediction: np.ndarray,
+    label: np.ndarray,
+    **overrides: Any,
+) -> dict[str, Any]:
+    """Score one prediction against one raw label volume.
+
+    `label` should be the untouched label with its ignore class intact.
+    `overrides` are passed straight through to `compute_leaderboard_score`;
+    leave empty for leaderboard parity.
     """
     module = load_metric_module()
+    report = module.compute_leaderboard_score(prediction, label, **overrides)
 
-    # The public entry point differs between releases of the package. Resolve it
-    # at call time and fail loudly rather than guessing at a signature.
-    raise MetricUnavailable(
-        "score_pair() is not wired to the installed package yet.\n"
-        f"Imported module: {getattr(module, '__name__', '?')} "
-        f"({getattr(module, '__file__', '?')})\n"
-        "Run `bash scripts/setup_metric.sh --inspect-only` and wire the entry "
-        "point in src/evaluation/metric_adapter.py."
-    )
+    topo = getattr(report, "topo", None)
+    voi = getattr(report, "voi", None)
+    topo_f1 = dict(getattr(topo, "topoF1_by_dim", {}) or {})
+
+    return {
+        "score": _as_float(getattr(report, "score", None)),
+        "topo_score": _as_float(getattr(topo, "toposcore", None)),
+        "surface_dice": _as_float(getattr(report, "surface_dice", None)),
+        "voi_score": _as_float(getattr(voi, "voi_score", None)),
+        "voi_split": _as_float(getattr(voi, "voi_split", None)),
+        "voi_merge": _as_float(getattr(voi, "voi_merge", None)),
+        "voi_total": _as_float(getattr(voi, "voi_total", None)),
+        "n_foreground": _as_float(getattr(voi, "n_foreground", None)),
+        # k=0 components, k=1 tunnels/handles, k=2 cavities.
+        "topo_f1_dim0": _as_float(topo_f1.get(0)),
+        "topo_f1_dim1": _as_float(topo_f1.get(1)),
+        "topo_f1_dim2": _as_float(topo_f1.get(2)),
+    }

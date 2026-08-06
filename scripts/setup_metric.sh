@@ -109,9 +109,14 @@ if ! command -v kaggle >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -f "${KAGGLE_CONFIG_DIR:-$HOME/.kaggle}/kaggle.json" ]]; then
-  echo "ERROR: kaggle.json not found. Download it from your Kaggle account page"
-  echo "       (Settings -> API -> Create New Token) and save to ~/.kaggle/kaggle.json"
+# Credentials come from either kaggle.json or the env vars; accept both.
+if [[ ! -f "${KAGGLE_CONFIG_DIR:-$HOME/.kaggle}/kaggle.json" ]] \
+   && [[ -z "${KAGGLE_USERNAME:-}" || -z "${KAGGLE_KEY:-}" ]]; then
+  echo "ERROR: no Kaggle credentials found."
+  echo
+  echo "Create a token at Kaggle -> Settings -> API -> Create New Token, then either:"
+  echo "  export KAGGLE_USERNAME=... && export KAGGLE_KEY=..."
+  echo "or save the downloaded file to ~/.kaggle/kaggle.json (chmod 600)."
   exit 1
 fi
 

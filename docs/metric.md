@@ -22,14 +22,23 @@ missing or extra structure.
 ## VOI_score
 
 Variation of Information between the connected-component labelings of
-prediction and ground truth (6-connectivity in 3D):
+prediction and ground truth:
 
 ```text
 VOI_split = H(GT | Pred)     # over-segmentation
 VOI_merge = H(Pred | GT)     # under-segmentation
 VOI_total = VOI_split + VOI_merge
-VOI_score = 1 / (1 + alpha * VOI_total),  alpha = 0.3
+VOI_score = 1 / (1 + alpha * VOI_total)
 ```
+
+The installed package defaults to `voi_connectivity=26` and `voi_alpha=1.0`.
+The competition write-up text reads as 6-connectivity and alpha 0.3; where the
+two disagree the package is authoritative, since it is what scores the
+leaderboard. We call it with its own defaults and override nothing.
+
+`VOIReport` exposes `voi_split` and `voi_merge` separately, which is worth
+recording — merge errors and split errors call for opposite fixes and the
+combined term hides which one dominates.
 
 Two sheets merged into one component is penalised here, which is why touching
 sheets are the dominant failure mode in this competition.
@@ -40,6 +49,9 @@ Betti-number matching from algebraic topology, comparing topological features
 per homology dimension: `k=0` components, `k=1` tunnels/handles, `k=2`
 cavities. A per-dimension topological F1 is computed from matched features and
 averaged over the active dimensions.
+
+`TopoReport.topoF1_by_dim` gives the per-dimension breakdown, which localises
+whether we are losing points to spurious components, tunnels or cavities.
 
 ## Why this shapes the approach
 
@@ -78,8 +90,23 @@ requires the Betti-Matching-3D C++ submodule to be compiled:
 bash scripts/setup_metric.sh
 ```
 
+The entry point is:
+
+```python
+topometrics.compute_leaderboard_score(predictions, labels) -> LeaderboardReport
+```
+
+It takes `ignore_label=2` by default, so **pass raw labels through** — do not
+pre-mask the ignore class. Defaults also cover `surface_tolerance=2.0`,
+`spacing=(1,1,1)` and `combine_weights=(0.30, 0.35, 0.35)`, matching our data,
+so we override nothing.
+
 Scoring is slow — the competition warns a full run can take hours — so budget
-accordingly and prefer resumable, per-case scoring.
+accordingly and prefer resumable, per-case scoring:
+
+```bash
+python scripts/evaluate.py --predictions DIR --labels DIR --out reports/scores.jsonl
+```
 
 Note that the 1st-place team had **no local validation set** and tuned their
 threshold by spending submissions. A working offline scorer is therefore a

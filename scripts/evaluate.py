@@ -25,7 +25,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from evaluation.harness import aggregate_by_scroll, evaluate_directory
+from evaluation.harness import aggregate_by_scroll, discover_cases, evaluate_directory
 from evaluation.metric_adapter import MetricUnavailable
 
 
@@ -41,10 +41,16 @@ def parse_args() -> argparse.Namespace:
         help="Maps case id -> scroll id, for the per-scroll breakdown.",
     )
     p.add_argument(
-        "--ignore-mode",
-        choices=["neutralize", "background"],
-        default="neutralize",
-        help="How to handle label 2 (see src/evaluation/harness.py).",
+        "--binarize-prediction",
+        action="store_true",
+        help="Map the prediction to (== 1) before scoring. nnU-Net emits three "
+        "classes; use this to compare against passing the raw labels through.",
+    )
+    p.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Score only the first N cases (useful for timing a full run).",
     )
     p.add_argument("--no-resume", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -63,7 +69,10 @@ def load_scroll_map(path: Path) -> dict[str, str]:
 
 
 def print_table(summary: dict[str, dict[str, float]]) -> None:
-    header = f"{'scroll':>10}  {'n':>4}  {'topo':>7}  {'sdice':>7}  {'voi':>7}  {'score':>7}"
+    header = (
+        f"{'scroll':>10}  {'n':>4}  {'topo':>7}  {'sdice':>7}  {'voi':>7}  "
+        f"{'split':>7}  {'merge':>7}  {'SCORE':>7}"
+    )
     print()
     print(header)
     print("-" * len(header))
@@ -71,7 +80,8 @@ def print_table(summary: dict[str, dict[str, float]]) -> None:
         print(
             f"{scroll:>10}  {int(row['n']):>4}  "
             f"{row['topo_score']:>7.4f}  {row['surface_dice']:>7.4f}  "
-            f"{row['voi_score']:>7.4f}  {row['composite']:>7.4f}"
+            f"{row['voi_score']:>7.4f}  {row['voi_split']:>7.4f}  "
+            f"{row['voi_merge']:>7.4f}  {row['score']:>7.4f}"
         )
 
 
@@ -87,13 +97,18 @@ def main() -> int:
             print(f"ERROR: {label} dir not found: {path}", file=sys.stderr)
             return 1
 
+    case_ids = None
+    if args.limit is not None:
+        case_ids = discover_cases(args.predictions)[: args.limit]
+
     try:
         scores = evaluate_directory(
             args.predictions,
             args.labels,
             args.out,
+            case_ids=case_ids,
             scroll_map=load_scroll_map(args.scroll_groups),
-            ignore_mode=args.ignore_mode,
+            binarize_prediction=args.binarize_prediction,
             resume=not args.no_resume,
         )
     except MetricUnavailable as exc:
@@ -106,7 +121,11 @@ def main() -> int:
 
     summary = aggregate_by_scroll(scores)
     print_table(summary)
-    print(f"\nignore mode : {args.ignore_mode}")
+
+    timed = [s.seconds for s in scores if s.seconds]
+    if timed:
+        print(f"\nmean {sum(timed) / len(timed):.1f}s/volume over {len(timed)} case(s)")
+    print(f"binarized   : {args.binarize_prediction}")
     print(f"per-case    : {args.out}")
     return 0
 
