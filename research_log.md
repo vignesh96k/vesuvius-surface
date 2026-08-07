@@ -213,7 +213,107 @@ Also visible: 35360 has a merge skew (merge 1.28 vs split 1.05), meaning fused
 sheets specifically, which calls for different post-processing than fragment
 removal.
 
-## 9. Corrections made along the way
+## 9. Architecture: considered and rejected
+
+**Question: why not fine-tune a pretrained Swin UNETR 3D instead?**
+
+The direct comparison has been run rigorously. Isensee et al.,
+[nnU-Net Revisited][rev] (MICCAI 2024), benchmarked SwinUNETR, nnFormer, CoTr
+and Mamba variants against properly-configured CNNs under identical conditions.
+SwinUNETR scored below the *original* nnU-Net on all six datasets — by up to
+4.8 Dice — while using ~70% more VRAM and ~67% more training time. Their
+conclusion was that many published transformer wins came from weak nnU-Net
+baselines. Our checkpoint is `nnUNetResEncUNetLPlans`, the ResEnc L preset that
+paper recommends as the fair baseline, so m7 is already the strong CNN config.
+
+The stronger argument is that architecture aims at the wrong bottleneck.
+SurfaceDice contributes 0.3448 of a possible 0.35 (section 6), so a model with
+5 more Dice points would buy at most **0.005** of composite. All 0.41 of
+headroom is topological.
+
+There is also direct counter-evidence: in the ScrollPrize repository a
+MedNeXt-L model beat the production baseline on SurfaceDice and VOI but lost
+badly on TopoScore (0.022 vs 0.084) because smoother predictions generate extra
+spurious handles and cavities. Smoother output helps geometry and hurts
+topology — the exact trade we do not want.
+
+Deferred, not dismissed: architectural diversity genuinely helps an *ensemble*.
+The winners fused four related nnU-Net variants; a structurally different model
+would decorrelate more. Worth revisiting if the topology work lands early.
+
+**Better version of the same instinct:** target the loss, not the encoder.
+clDice, skeleton recall and Betti-matching losses optimise connectivity and
+hole structure directly — the 65% of the score that is actually broken.
+
+## 10. CT foundation models
+
+**Question: is there an "ImageNet for CT" we can fine-tune like a ResNet?**
+
+Yes, several: STU-Net (TotalSegmentator, >100k annotations, 14.6M–1.46B params),
+CT-FM (148k CT scans, self-supervised), TAP-CT (105k volumes, DINOv2-style 3D
+ViT), MONAI's Swin UNETR SSL (~5k volumes), Models Genesis.
+
+Initially argued against all of them: they are pretrained on human anatomy at
+millimetre resolution with Hounsfield semantics, while ours is micro-CT of
+carbonised papyrus — thin sheets, no anatomy, micron scale. And we already had
+a checkpoint pretrained on this exact task, which strictly dominates generic
+pretraining.
+
+That reasoning was overturned by section 11.
+
+## 11. The contamination problem — why we pivoted to STU-Net
+
+m7's model card records the *fold* it trained on but never the *split* that
+defined that fold. Consequently **no volume is provably outside its training
+set**, and every number we have produced from m7 is unverifiable.
+
+What this does and does not invalidate:
+
+| Experiment | Valid? |
+|---|---|
+| m7's absolute score, generalisation claims | No |
+| "did our fine-tune improve things" | No |
+| Comparing post-processing variants on *fixed* m7 predictions | Yes — contamination inflates the baseline but does not flip the sign of an improvement; bias is conservative |
+
+The trap we nearly walked into: **fine-tuning from m7 inherits its
+contamination.** A model initialised from m7 has effectively seen whatever m7
+saw, so it cannot produce a clean holdout no matter what split we author. The
+`finetune_setup` scripts remain useful for chasing score, but not for
+measurement.
+
+Training from scratch would be clean but the winners needed 4000 epochs to
+reach 0.587 — out of budget.
+
+**STU-Net resolves the dilemma.** It is pretrained on TotalSegmentator, so it
+has provably never seen a Vesuvius volume; fine-tuning it against a split we
+author yields a genuinely clean holdout, while still starting from pretrained
+weights rather than scratch. The paper reports successful CT→MRI and CT→PET
+transfer, so CT→micro-CT is at least plausible. It is nnU-Net-based, so it
+plugs into the existing pipeline, and being architecturally distinct it doubles
+as an ensemble-diversity candidate.
+
+This reverses the section 10 conclusion. Generic pretraining is worth less than
+task-specific pretraining *on quality* — but it is worth more *on
+measurability*, and measurability was the binding constraint.
+
+Operational note: STU-Net ships its own nnU-Net 2.2 fork, which would replace
+the `nnunetv2` the m7 pipeline depends on. `scripts/setup_stunet.sh` therefore
+installs into a separate conda env and writes to a separate results tree.
+
+**Deliverable split.** Score and measurement are now separate deliverables:
+
+- m7 + post-processing → leaderboard score, described honestly as building on
+  published weights with an unverifiable split.
+- STU-Net fine-tuned on our authored split → every measured claim
+  (post-processing ablation, threshold sensitivity, per-scroll behaviour). It
+  will score lower; its job is to be measurable, not to win.
+
+`scripts/make_scroll_split.py` writes the authored split, in `stratified` mode
+(every fold's validation set gets a proportional share of every scroll, fixing
+the 44430 blind spot) or `scroll-holdout` mode (leave-one-scroll-out, for a
+genuine generalisation number).
+
+## 12. Corrections made along the way
 
 Recorded because they shaped the work:
 
@@ -224,6 +324,10 @@ Recorded because they shaped the work:
 | We must handle ignore ourselves | Metric handles it | Deleted a module |
 | Holdout is leakage-free | Unverified | Claim withdrawn |
 | Raw vs post-crop shapes comparable | They are not | One inconclusive run |
+| Generic CT pretraining not worth it | Right on quality, wrong on measurability | Reversed; see §11 |
+| Fine-tuning m7 would give a clean holdout | It inherits m7's exposure | Caught before spending GPU days |
+
+[rev]: https://arxiv.org/abs/2404.09556
 
 ## Open questions
 
