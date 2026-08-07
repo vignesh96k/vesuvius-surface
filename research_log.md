@@ -378,22 +378,33 @@ it, so a long-range affinity across them is labelled 0 when volume-level truth
 is 1. `scripts/audit_instance_locality.py` measures how often that happens —
 run it before trusting Stage 2a numbers. Short-range offsets are almost immune.
 
-### How to run (on the Linux box)
+### Two tracks (do not mix)
+
+| Track | What | Init | Config |
+|---|---|---|---|
+| **A** | Skeleton Recall + affinity | **from scratch** | **`3d_lowres`** |
+| **B** | STU-Net fine-tune | TotalSegmentator weights | separate env / results |
+
+m7 is neither track. Track A defaults to `3d_lowres` so each patch covers more
+of the scroll (affinity long-range). Author it with `make_lowres_plans.py` —
+nnU-Net often skips lowres for ~320³ volumes.
+
+### How to run Track A (on the Linux box)
 
 ```bash
 export PYTHONPATH=/mnt/workspace/code/vesuvius-surface/src:$PYTHONPATH
-python scripts/make_scroll_split.py --mode stratified
+python scripts/make_lowres_plans.py
+nnUNetv2_preprocess -d 100 -c 3d_lowres -plans_name nnUNetPlans
+python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
 python scripts/register_nnunet_trainers.py
 python -m pytest tests/test_affinity_targets.py -v
-python scripts/audit_instance_locality.py --n-crops 4 --max-volumes 20
 bash scripts/nnunet_train_topology.sh --stage skelrecall --dry-run
 bash scripts/nnunet_train_topology.sh --stage affinity --dry-run
 ```
 
-Do **not** initialise from the m7 checkpoint. Results go to
-`nnUNet_results_topology/`. Measure every run with `scripts/evaluate.py` and
-report the per-scroll table — scroll 44430 can hide a regression in a pooled
-number.
+From scratch only (`--pretrained` is rejected). Results →
+`nnUNet_results_topology/`. Measure with `scripts/evaluate.py` on the 26010
+holdout.
 
 ## Open questions
 

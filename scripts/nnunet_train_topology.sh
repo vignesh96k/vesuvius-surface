@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# Launch Stage 1 (Skeleton Recall) or Stage 2a (affinity auxiliary) training.
+# Track A — topology training from scratch on 3d_lowres.
 #
-# Prerequisites (in THIS env — do not use the m7 scoring env if it differs):
-#   1. authored split (hold out scroll 26010 as the 129-case val set):
+# Skeleton Recall and/or affinity auxiliary. NOT the m7 track. NOT STU-Net.
+#
+# Prerequisites (vesuvius / stock nnunetv2 env):
+#   1. lowres plans + preprocess:
+#        python scripts/make_lowres_plans.py
+#        nnUNetv2_preprocess -d 100 -c 3d_lowres -plans_name nnUNetPlans
+#   2. authored split (hold out scroll 26010):
 #        python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
-#   2. registered trainers:
+#   3. registered trainers:
 #        export PYTHONPATH=/mnt/workspace/code/vesuvius-surface/src:$PYTHONPATH
 #        python scripts/register_nnunet_trainers.py
-#   3. Do NOT initialise from the m7 checkpoint (unverifiable split).
-#      From-scratch or STU-Net weights only.
 #
 # Usage:
 #   bash scripts/nnunet_train_topology.sh --stage skelrecall
@@ -19,11 +22,11 @@ set -euo pipefail
 
 NNUNET_RAW="${nnUNet_raw:-/mnt/workspace/code/nnUNet_raw}"
 NNUNET_PREPROCESSED="${nnUNet_preprocessed:-/mnt/workspace/code/nnUNet_preprocessed}"
-# Separate results tree so topology experiments never collide with m7.
+# Separate results tree so topology experiments never collide with m7 / STU-Net.
 NNUNET_RESULTS="${nnUNet_results:-/mnt/workspace/code/nnUNet_results_topology}"
 DATASET_ID="${DATASET_ID:-100}"
 DATASET_NAME="Dataset$(printf '%03d' "$DATASET_ID")_VesuviusSurface"
-CONFIG="${CONFIG:-3d_fullres}"
+CONFIG="${CONFIG:-3d_lowres}"
 PLANS="${PLANS:-nnUNetPlans}"
 FOLD="${FOLD:-0}"
 STAGE=""
@@ -49,7 +52,7 @@ while [[ $# -gt 0 ]]; do
     --dry-run) DRY_RUN=1; shift ;;
     *)
       echo "Unknown arg: $1"
-      echo "Usage: bash scripts/nnunet_train_topology.sh --stage skelrecall|affinity [--trainer T] [--fold F] [--pretrained PATH] [--dry-run]"
+      echo "Usage: bash scripts/nnunet_train_topology.sh --stage skelrecall|affinity [--trainer T] [--fold F] [--dry-run]"
       exit 1
       ;;
   esac
@@ -74,20 +77,53 @@ case "$STAGE" in
     ;;
 esac
 
+PLANS_FILE="$NNUNET_PREPROCESSED/$DATASET_NAME/${PLANS}.json"
+if [[ ! -f "$PLANS_FILE" ]]; then
+  echo "ERROR: plans not found: $PLANS_FILE"
+  echo "Run scripts/nnunet_setup_and_preprocess.sh then scripts/make_lowres_plans.py"
+  exit 1
+fi
+
+if ! python -c "
+import json,sys
+p=json.load(open('$PLANS_FILE'))
+sys.exit(0 if '$CONFIG' in p.get('configurations',{}) else 1)
+"; then
+  echo "ERROR: config '$CONFIG' not in $PLANS_FILE"
+  echo "Author it with:"
+  echo "  python scripts/make_lowres_plans.py"
+  echo "  nnUNetv2_preprocess -d $DATASET_ID -c $CONFIG -plans_name $PLANS"
+  exit 1
+fi
+
+DATA_ID=$(python -c "
+import json
+p=json.load(open('$PLANS_FILE'))
+c=p['configurations']['$CONFIG']
+print(c.get('data_identifier',''))
+")
+if [[ -n "$DATA_ID" && ! -d "$NNUNET_PREPROCESSED/$DATASET_NAME/$DATA_ID" ]]; then
+  echo "ERROR: preprocessed data for $CONFIG not found:"
+  echo "  $NNUNET_PREPROCESSED/$DATASET_NAME/$DATA_ID"
+  echo "Run:"
+  echo "  nnUNetv2_preprocess -d $DATASET_ID -c $CONFIG -plans_name $PLANS"
+  exit 1
+fi
+
 SPLIT_FILE="$NNUNET_PREPROCESSED/$DATASET_NAME/splits_final.json"
 if [[ ! -f "$SPLIT_FILE" ]]; then
   echo "ERROR: no authored split at $SPLIT_FILE"
-  echo "Run: python scripts/make_scroll_split.py --mode stratified"
+  echo "Run: python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010"
   exit 1
 fi
 
-if [[ -n "$PRETRAINED" && "$PRETRAINED" == *"surface_m7"* ]]; then
-  echo "ERROR: refusing to initialise from the m7 checkpoint."
-  echo "It inherits an unverifiable split and would recontaminate the holdout."
-  echo "Use STU-Net weights or omit --pretrained for from-scratch."
+if [[ -n "$PRETRAINED" ]]; then
+  echo "ERROR: Track A is from-scratch only. Do not pass --pretrained."
+  echo "STU-Net is Track B (scripts/stunet_finetune.sh). m7 is not used here."
   exit 1
 fi
 
+echo "track      : A (topology, from scratch)"
 echo "stage      : $STAGE"
 echo "trainer    : $TRAINER"
 echo "dataset    : $DATASET_NAME"
@@ -105,14 +141,6 @@ print(f"resolved    : {${TRAINER}}")
 PY
 
 CMD=(nnUNetv2_train "$DATASET_ID" "$CONFIG" "$FOLD" -tr "$TRAINER" -p "$PLANS")
-if [[ -n "$PRETRAINED" ]]; then
-  if [[ ! -f "$PRETRAINED" ]]; then
-    echo "ERROR: pretrained weights not found: $PRETRAINED"
-    exit 1
-  fi
-  CMD+=(-pretrained_weights "$PRETRAINED")
-  echo "pretrained  : $PRETRAINED"
-fi
 
 echo
 echo "${CMD[*]}"
