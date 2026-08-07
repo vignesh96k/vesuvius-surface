@@ -329,6 +329,72 @@ Recorded because they shaped the work:
 
 [rev]: https://arxiv.org/abs/2404.09556
 
+## 13. Topology-aware auxiliary training (code written, not yet run)
+
+Two stages land in `src/training/`. Nothing in this section has been executed —
+the authoring machine has no Python, GPU or data. Every claim below is a design
+decision waiting on a measured before/after.
+
+### Stage 1 — Skeleton Recall Loss
+
+Port of Kirchhoff et al. (ECCV 2024, MIC-DKFZ/Skeleton-Recall) as
+`nnUNetTrainerSkeletonRecall`. Total loss `L_Dice + L_CE + w * L_SkelRecall`.
+Targets connectivity / breaks; expect movement in `voi_split` and TopoScore
+k=0/k=1, not merges.
+
+Two deliberate departures from upstream: we binarise on `LABEL_SURFACE` rather
+than `seg > 0` (ignore is 58% of a typical volume here), and we append the
+skeleton as an extra segmentation channel instead of forking the dataloader —
+nnU-Net already carries, transforms and downsamples segmentation channels, so
+only the loss needs to unpack them.
+
+### Stage 2a — Affinity auxiliary head
+
+`nnUNetTrainerAffinity` attaches a 1×1×1 conv to the **full-resolution decoder
+stage** (not the bottleneck — a 128³ patch through 6 stages leaves 4³). Short-
+range 6-neighbourhood plus long-range offsets at 2/4/8/16 voxels per axis (15
+channels). Inference is unchanged: the head is a regulariser only. Mutex
+watershed agglomeration is Stage 2b and is deliberately absent until 2a helps.
+
+Rationale: `VOI_split`/`VOI_merge` are connectomics metrics. Funke et al.
+(TPAMI 2018) showed long-range affinities help *even as an auxiliary loss
+discarded at inference* — that is the specific claim Stage 2a tests. Sheet
+instances are connected components of the surface under 26-connectivity, matching
+the metric package's `voi_connectivity` default.
+
+### Instance labels through augmentation
+
+Affinity targets need instance ids, but nnU-Net carries one semantic label array
+through spatial augmentation. We derive instances by connected components **on
+the augmented patch**, after every spatial transform. Correspondence is then
+true by construction.
+
+Rejected alternative: precompute an instance volume and route it through
+augmentation. That needs a custom preprocessor and dataloader, and nearest-
+neighbour resampling of instance ids at rotated boundaries is itself a source of
+error. The cost of the chosen approach is real: two fragments of the same sheet
+that only reconnect outside the 128³ patch look like separate instances inside
+it, so a long-range affinity across them is labelled 0 when volume-level truth
+is 1. `scripts/audit_instance_locality.py` measures how often that happens —
+run it before trusting Stage 2a numbers. Short-range offsets are almost immune.
+
+### How to run (on the Linux box)
+
+```bash
+export PYTHONPATH=/mnt/workspace/code/vesuvius-surface/src:$PYTHONPATH
+python scripts/make_scroll_split.py --mode stratified
+python scripts/register_nnunet_trainers.py
+python -m pytest tests/test_affinity_targets.py -v
+python scripts/audit_instance_locality.py --n-crops 4 --max-volumes 20
+bash scripts/nnunet_train_topology.sh --stage skelrecall --dry-run
+bash scripts/nnunet_train_topology.sh --stage affinity --dry-run
+```
+
+Do **not** initialise from the m7 checkpoint. Results go to
+`nnUNet_results_topology/`. Measure every run with `scripts/evaluate.py` and
+report the per-scroll table — scroll 44430 can hide a regression in a pooled
+number.
+
 ## Open questions
 
 1. **Is this a Kaggle code competition?** If inference must run inside a
@@ -338,11 +404,16 @@ Recorded because they shaped the work:
 3. Does nnU-Net's 3-class output need binarising before scoring, or does the
    metric handle predicted 2s? A probe is written but not yet run.
 4. Why is 44430 so much harder? 16 volumes only; needs visual inspection.
+5. Does Stage 1 / Stage 2a actually move VOI and TopoScore on a clean holdout?
+   Code is written; measurement is the next step.
 
 ## Next
 
-Build a scroll-balanced evaluation bench (~40 volumes, ~40 min per experiment),
-then work the topological post-processing chain, then tune threshold and
-post-processing jointly against the local scorer.
+1. Author the stratified split and register trainers.
+2. Run the affinity unit tests and the instance-locality audit.
+3. Train Stage 1 (Skeleton Recall), then Stage 2a (affinity), measuring each
+   with the local scorer on the same volumes, per scroll.
+4. In parallel: post-processing chain for the m7 score deliverable.
+5. Stage 2b (mutex watershed) only if 2a helps.
 
 [1st]: https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su
