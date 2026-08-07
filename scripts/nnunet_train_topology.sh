@@ -2,7 +2,8 @@
 # Launch Stage 1 (Skeleton Recall) or Stage 2a (affinity auxiliary) training.
 #
 # Prerequisites (in THIS env — do not use the m7 scoring env if it differs):
-#   1. authored split:  python scripts/make_scroll_split.py --mode stratified
+#   1. authored split (hold out scroll 26010 as the 129-case val set):
+#        python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
 #   2. registered trainers:
 #        export PYTHONPATH=/mnt/workspace/code/vesuvius-surface/src:$PYTHONPATH
 #        python scripts/register_nnunet_trainers.py
