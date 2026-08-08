@@ -223,15 +223,11 @@ Control chain (not the novelty layer). Cumulative ablation:
 python scripts/run_postprocess.py \
   --predictions /mnt/workspace/code/subsets/m7_holdout/predictions \
   --output /mnt/workspace/code/subsets/m7_holdout/pp_firstplace \
-  --ablate --limit 12
-
-python scripts/evaluate.py \
-  --predictions /mnt/workspace/code/subsets/m7_holdout/pp_firstplace/fill \
-  --labels /mnt/workspace/code/subsets/m7_holdout/labels \
-  --out reports/pp_fill.jsonl
+  --labels /mnt/workspace/code/subsets/m7_holdout/labels
 ```
 
-Stages: `raw` → `remove_small` → `closing` → `patch` → `plug` → `fill`.
+One run writes the final masks and prints the score table. Add `--ablate` for
+a cumulative stage comparison in the same command.
 
 ## Credits
 

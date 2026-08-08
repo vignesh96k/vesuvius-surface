@@ -446,11 +446,11 @@ Height-map / LUT details follow the public reimplementation in
 python scripts/run_postprocess.py \
   --predictions /mnt/workspace/code/subsets/m7_holdout/predictions \
   --output /mnt/workspace/code/subsets/m7_holdout/pp_firstplace \
-  --ablate --limit 12
+  --labels /mnt/workspace/code/subsets/m7_holdout/labels
 ```
 
-This is the **baseline**. Novelty (2nd-place-style unmerge, thickness/normal
-cuts, offline metric search) builds on top and must report Δ vs these stages.
+One command writes final masks and scores them. Pass ``--ablate`` for the
+cumulative stage table in the same run.
 
 [1st]: https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su
 
