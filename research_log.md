@@ -420,11 +420,37 @@ holdout.
 
 ## Next
 
-1. Author the stratified split and register trainers.
+1. Author the stratified / holdout-scroll split and register trainers.
 2. Run the affinity unit tests and the instance-locality audit.
 3. Train Stage 1 (Skeleton Recall), then Stage 2a (affinity), measuring each
    with the local scorer on the same volumes, per scroll.
-4. In parallel: post-processing chain for the m7 score deliverable.
+4. **Post-processing baseline (1st-place chain)** — see §14; score ablation,
+   then add merge-cut novelty.
 5. Stage 2b (mutex watershed) only if 2a helps.
 
+## 14. Post-processing baseline (1st place)
+
+Control implementation lives in `src/postprocess/first_place.py`, matching the
+winning writeup's operational chain:
+
+1. Drop components &lt; 20k voxels  
+2. Per-sheet spherical closing (r=3)  
+3. Height-map gap patching (discard if internal holes increase)  
+4. 1-voxel plug via 2×2×2 LUT  
+5. Global `binary_fill_holes`
+
+Height-map / LUT details follow the public reimplementation in
+`bshepp/volumen` (credited in-module), with the writeup's 20k threshold.
+
+```bash
+python scripts/run_postprocess.py \
+  --predictions /mnt/workspace/code/subsets/m7_holdout/predictions \
+  --output /mnt/workspace/code/subsets/m7_holdout/pp_firstplace \
+  --ablate --limit 12
+```
+
+This is the **baseline**. Novelty (2nd-place-style unmerge, thickness/normal
+cuts, offline metric search) builds on top and must report Δ vs these stages.
+
 [1st]: https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su
+

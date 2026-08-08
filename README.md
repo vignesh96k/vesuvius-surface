@@ -213,6 +213,26 @@ and a C++ toolchain for the Betti-Matching-3D submodule):
 bash scripts/setup_metric.sh
 ```
 
+The entry point is wired in `scripts/evaluate.py` (see [docs/metric.md](docs/metric.md)).
+
+## Step 6 — 1st-place post-processing baseline
+
+Control chain (not the novelty layer). Cumulative ablation:
+
+```bash
+python scripts/run_postprocess.py \
+  --predictions /mnt/workspace/code/subsets/m7_holdout/predictions \
+  --output /mnt/workspace/code/subsets/m7_holdout/pp_firstplace \
+  --ablate --limit 12
+
+python scripts/evaluate.py \
+  --predictions /mnt/workspace/code/subsets/m7_holdout/pp_firstplace/fill \
+  --labels /mnt/workspace/code/subsets/m7_holdout/labels \
+  --out reports/pp_fill.jsonl
+```
+
+Stages: `raw` → `remove_small` → `closing` → `patch` → `plug` → `fill`.
+
 ## Credits
 
 - nnU-Net v2 — [MIC-DKFZ/nnUNet](https://github.com/MIC-DKFZ/nnUNet)
@@ -221,5 +241,5 @@ bash scripts/setup_metric.sh
 - Pretrained `surface_m7_nnunet` weights — [scrollprize on Hugging Face](https://huggingface.co/scrollprize/surface_m7_nnunet), from the
   [1st-place solution](https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su)
   by Tony Li, OzanM., Yiheng Wang and PaulG
-- Post-processing design follows that writeup (component filtering, per-sheet
-  closing, height-map patching, 1-voxel hole plugging, `binary_fill_holes`)
+- Post-processing baseline follows that writeup; height-map / LUT mechanics
+  adapted from [bshepp/volumen](https://github.com/bshepp/volumen) `src_v2/postprocess.py`
