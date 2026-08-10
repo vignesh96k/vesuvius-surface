@@ -28,9 +28,7 @@ add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty
 cases), scored with the real leaderboard-equivalent metric. "Net-neutral" (A4/B4): the unmerge
 layer passes real per-volume accept gates on both lines (19/129 and 38/129 respectively), but
 the aggregate score across all 129 cases is unchanged to full float precision on both — a real,
-checked result, not an approximation. Other real result, not part of either track's ladder:
-skeleton-recall pipeline validation on a partial checkpoint, 0.48812 public / 0.49964 private
-(confirms the submission pipeline itself works, not a final reported model).
+checked result, not an approximation.
 
 ## Quickstart
 
