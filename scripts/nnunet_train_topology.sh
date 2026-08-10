@@ -136,7 +136,7 @@ echo "PYTHONPATH : $PYTHONPATH"
 echo
 
 python - <<PY
-from training.trainers import ${TRAINER}
+from vesuvius_surface.training.trainers import ${TRAINER}
 print(f"resolved    : {${TRAINER}}")
 PY
 

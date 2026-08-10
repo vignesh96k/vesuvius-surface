@@ -46,7 +46,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.nnunet_splits import list_case_ids, load_scroll_groups
+from vesuvius_surface.data.nnunet_splits import list_case_ids, load_scroll_groups
 
 logger = logging.getLogger(__name__)
 

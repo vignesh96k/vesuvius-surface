@@ -24,15 +24,14 @@ import logging
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.io import probe_volume
-from data.nnunet_splits import list_case_ids
+from vesuvius_surface.data.io import probe_volume
+from vesuvius_surface.data.nnunet_splits import list_case_ids
 
 logger = logging.getLogger(__name__)
 

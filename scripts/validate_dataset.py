@@ -7,13 +7,13 @@ import argparse
 import sys
 from pathlib import Path
 
-# Put src/ on path so `data` / `eda` / `utils` packages resolve.
+# Put src/ on path so the `vesuvius_surface` package resolves without an editable install.
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.validate import validate_dataset
+from vesuvius_surface.data.validate import validate_dataset
 
 
 def parse_args() -> argparse.Namespace:

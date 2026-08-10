@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install (CPU-only torch, no CUDA download needed for pure-logic tests)
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .   # scope/rule selection configured in pyproject.toml [tool.ruff]
+
+      - name: Unit tests (no GPU / dataset needed by design -- see docs/reproducibility_notes.md)
+        run: pytest tests/unit -v
+
+      # tests/functional/ is deliberately NOT run here: it needs real data
+      # (VESUVIUS_DATA_ROOT) and a real checkpoint (VESUVIUS_TEST_CHECKPOINT_DIR), documented
+      # as manual-only. Real training / real leaderboard-equivalent scoring / real Kaggle
+      # submissions are GPU-hours/real-account-scale and also stay manual -- this job's job is
+      # to prove the pure logic stays correct, not to reproduce headline numbers.

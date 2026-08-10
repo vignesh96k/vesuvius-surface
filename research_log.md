@@ -452,5 +452,134 @@ python scripts/run_postprocess.py \
 One command writes final masks and scores them. Pass ``--ablate`` for the
 cumulative stage table in the same run.
 
+## 15. Novelty: metric-guided unmerge
+
+The control chain above repairs holes *inside* a component (closing, height-map
+patch, hole plug, fill) but never severs a bridge fused *between* two
+components — it is merge-blind by construction. The ablation confirms it
+directly: `voi_merge` sits at 1.1230 (raw) through 1.1251 (fill) across every
+control stage on the 5-case holdout sample — untouched, while `surface_dice`
+and `topo_score` move. Scroll 35360 independently shows a real merge skew
+(§8: merge 1.28 vs split 1.05) — fused sheets specifically, not fragments.
+
+**Method** (`src/postprocess/unmerge.py`, separate module — not folded into
+`first_place.py`):
+
+1. Start from the control's output, one connected component at a time.
+2. Erode the component by a ball of radius `erosion_radius`. A thin neck
+   vanishes under erosion; the two thicker masses it joins survive as separate
+   seed blobs. If erosion leaves >=2 seeds each >= `min_seed_size` voxels, the
+   component is a *merge candidate*.
+3. Partition the *original* (uneroded) component by nearest surviving seed —
+   a Euclidean nearest-seed / Voronoi tessellation via
+   `distance_transform_edt(..., return_indices=True)`. This needs nothing
+   beyond scipy and is the simplest valid stand-in for a full watershed.
+4. Remove the `cut_width`-voxel boundary between differently-labeled
+   partitions. The partition boundary is a full separating surface by
+   construction, so removing it disconnects the two sheets.
+5. Drop pieces below `min_piece_size` (cut debris), same idea as
+   `remove_small_components`.
+
+**Accept/reject is per volume, not per cut.** Every candidate cut in a volume
+is applied at once, the volume is scored once with the *same*
+`evaluation.metric_adapter.score_pair` the harness uses (never reimplemented),
+and the cut version is kept only if `score` improves by at least
+`min_score_delta` (default 0.0 — any non-negative improvement). Scoring one
+volume already costs ~60-90s (Betti-matching dominates); per-cut scoring
+inside a volume was not affordable, so per-volume is the coarsest granularity
+that is still an honest reading of "accept a cut only if the metric improves
+on that volume."
+
+**Real calibration, not a guess.** The first version defaulted
+`erosion_radius=2` and found *zero* candidates across 5 real m7_holdout
+control masks. A distance-transform check explained why: even the largest
+healthy component's half-thickness maxes out around 2.0 voxels (median 1.0)
+— these are inherently thin sheets, not blobs, and radius-2 erosion removes
+one whole-cloth. `erosion_radius=1` is the largest radius that still leaves
+real sheet material as seeds; it immediately finds real candidates, including
+9 in a case from scroll 35360 — the exact scroll flagged above for merge
+skew.
+
+**How to run:**
+
+```bash
+python scripts/run_postprocess.py \
+  --predictions /mnt/workspace/code/subsets/m7_holdout/predictions \
+  --output /mnt/workspace/code/subsets/m7_holdout/pp_unmerge \
+  --labels /mnt/workspace/code/subsets/m7_holdout/labels \
+  --method unmerge
+```
+
+Writes `control/`, `unmerge_proposed/` (cut applied unconditionally, for
+inspection), and `unmerge_accepted/` (the gated output — this is the layer's
+actual result) under `--output`, plus a control-vs-accepted comparison table
+(ΔSCORE, ΔVOI_merge, per scroll) and `scores/unmerge_vs_control_summary.json`.
+
+**What to claim: Δ vs control only**, not an absolute leaderboard number —
+the holdout split provenance is unverified (§7) and n is small. See the raw
+smoke-test evidence and the 5-case CLI comparison this section is measured
+against for the honest current numbers before citing this anywhere.
+
 [1st]: https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su
+
+## 16. From negative results to the one real win, and the full picture
+
+Sections 1–15 stop before the fine-tuning attempts actually ran. This section closes the gap.
+Full numbers for everything below live in `experiment_summary.md`; this section is the
+narrative — what was tried, in what order, and why each pivot happened. The real orchestration
+(shell scripts wiring `nnUNetv2_train`/prediction/scoring together with hardcoded PIDs and
+paths for a single overnight run) is not committed verbatim — it was disposable by
+construction — but every configuration it ran is captured here or in a trainer's own docstring
+(`src/vesuvius_surface/training/trainers/README.md` maps each class to its result).
+
+**Full fine-tuning, three ways, three negative results.** STU-Net (chosen specifically because
+it's provably leak-free — TotalSegmentator-pretrained, never seen a Vesuvius volume) fine-tuned
+worse than the from-scratch baseline (0.4629 vs. 0.5575). A 5-way 100-epoch comparison
+(skeleton-recall, clDice+ScheduleFree, affinity, highpass-only, laplacian) picked
+skeleton-recall as the winner (0.5307) — clDice+ScheduleFree came close (0.5285) but lost.
+Full fine-tuning of arunodhayan's real pipeline (highpass input + skeleton-recall + affinity,
+applied to both the ensemble and the cascade) was unambiguously negative across every
+component metric: cascade 0.7198 → 0.5208, ensemble 0.7029 → 0.5172. A follow-up diagnostic
+isolating skeleton-recall alone (raw CT, no highpass, 20 epochs) partially recovered (0.5768)
+but stayed well below zero-shot — highpass/affinity were part of the regression, not the whole
+story, and the deeper lesson held: full fine-tuning on top of a strong pretrained checkpoint is
+a real risk, not a free win.
+
+**The pivot: freeze almost everything.** Rather than fine-tune the whole cascade, the next
+attempt froze all but the final decoder stage and the deep-supervision heads (0.07% of
+parameters trainable) and trained only that for 10 epochs. First genuinely positive fine-tuning
+result of the project: 0.7248 vs. 0.7198 zero-shot (+0.0050), confirmed on the full 129-case
+LOSO after an initial n=26 diagnostic pointed the same direction. Adding the 1st-place
+postprocessing chain on top pushed it further, to 0.7363 (+0.0165 cumulative) — mostly a
+toposcore gain (0.4819 → 0.5563), with the usual small surface_dice cost from postprocessing.
+The same last-layers recipe, applied to a from-scratch skeleton-recall model extended to 700
+epochs (resuming the 100-epoch winner rather than restarting), landed a smaller but real gain
+in the same direction: 0.5671 vs. 0.5597 (no-skeleton-recall baseline), toposcore up sharply
+(0.2021 → 0.3028) — the clearest direct evidence in this project that skeleton-recall's loss
+term does what it's designed to do.
+
+**Methodological rigor kept in the loop, not skipped for speed.** The fast last-layers result
+above was trained on non-TTA (`--disable_tta`) cascade previous-stage data for speed, but
+scored against a TTA-generated baseline — a real train/eval mismatch, caught and named before
+being reported as clean. A second, fully TTA-consistent confirmatory run of the same recipe was
+built and queued specifically to close that gap (see `docs/reproducibility_notes.md` for its
+status as of this repo's last update).
+
+**The novelty layer, run for real.** `unmerge.py` (§15) was calibrated on 5 cases with zero
+measured accepted improvement in that small sample. Run for real on the full 129-case LOSO set
+against the last-layers cascade model's predictions: 25 of 129 volumes had a genuine merge
+candidate, 19 were accepted by the metric-improvement gate — a real, non-trivial fraction, not
+noise. The same pipeline was run a second time on the from-scratch skeleton-recall line. Final
+aggregate score deltas for both lines are in `experiment_summary.md`.
+
+**Real Kaggle submissions, including two genuine bugs found and fixed live.** Submitting the
+final skeleton-recall model (with postprocessing) surfaced that Kaggle's `/kaggle/input` mount
+path convention for custom datasets is **not consistent even within one account, in the same
+kernel run** — one attached dataset mounted at the new nested
+`/kaggle/input/datasets/<owner>/<slug>/` path, a different one (pushed from the exact same
+kernel metadata shape) mounted at the old flat `/kaggle/input/<slug>/` path. The fix that
+shipped probes both candidate paths and uses whichever exists
+(`resolve_dataset_mount` in the submission notebook), rather than assuming either convention.
+A second, unrelated bug (a stale function reference left over from a mid-session rename) was
+caught the same way: real error, real fix, re-verified end to end before trusting the result.
 

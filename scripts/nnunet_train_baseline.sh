@@ -59,7 +59,7 @@ if [[ ${#VAL_SCROLLS[@]} -gt 0 ]]; then
   python - "$RAW_DIR" "$DATASET_DIR" "${VAL_SCROLLS[@]}" <<'PY'
 import sys
 from pathlib import Path
-from data.nnunet_export import write_scroll_holdout_split
+from vesuvius_surface.data.nnunet_export import write_scroll_holdout_split
 
 raw = Path(sys.argv[1])
 pre = Path(sys.argv[2])

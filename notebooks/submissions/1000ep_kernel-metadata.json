@@ -1,0 +1,26 @@
+{
+  "id": "vigneshk96/vesuvius-100-epoch-baseline-submission",
+  "id_no": 129770002,
+  "title": "Vesuvius 100-Epoch Baseline Submission",
+  "code_file": "vesuvius-100-epoch-baseline-submission.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": [
+    "gpu"
+  ],
+  "dataset_sources": [
+    "vigneshk96/vesuvius-1000epoch-checkpoint-v1",
+    "vigneshk96/vesuvius-nnunet-wheels-v3"
+  ],
+  "kernel_sources": [],
+  "competition_sources": [
+    "vesuvius-challenge-surface-detection"
+  ],
+  "model_sources": [],
+  "docker_image": "gcr.io/kaggle-private-byod/python@sha256:37c64f7dd9c54116ecd1bcc88817c5469b88387388fade02bfa8bf3fc647d461",
+  "machine_shape": "NvidiaTeslaT4"
+}
