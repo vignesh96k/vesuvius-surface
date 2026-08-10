@@ -54,7 +54,7 @@ pip install -e ".[dev]"
 pytest tests/unit
 ```
 
-## The story, step by step
+## Step by Step
 
 This is the actual order the project happened in, and every step below has a real command
 attached — this repo doesn't ask you to take any result on faith.
