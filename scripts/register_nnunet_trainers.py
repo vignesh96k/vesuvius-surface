@@ -170,7 +170,7 @@ def main() -> int:
     print("  python scripts/register_nnunet_trainers.py --check")
     print()
     print("Then launch, e.g.:")
-    print("  bash scripts/nnunet_train_topology.sh --stage skelrecall")
+    print("  nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecall_100epochs")
     return 0
 
 

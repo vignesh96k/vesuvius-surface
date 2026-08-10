@@ -82,7 +82,7 @@ gave it a second, stronger reason: arunodhayan's and m7's checkpoints were both 
 a from-scratch baseline trained against our own authored split is the only way to get one.
 
 **Source:** `presentation_notes.md` line 18-22 (original attribution reasoning); line 85-92
-(the leakage discovery that reinforced it); `scripts/verify_split.py`.
+(the leakage discovery that reinforced it).
 
 ---
 

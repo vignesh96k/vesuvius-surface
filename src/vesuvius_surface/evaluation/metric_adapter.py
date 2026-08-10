@@ -1,7 +1,8 @@
 """Thin adapter over the official competition metric package (`topometrics`).
 
 Installed from the Kaggle dataset `sohier/vesuvius-metric-resources` via
-`scripts/setup_metric.sh`. Everything that depends on its API lives here.
+`packages/vesuvius_evaluation/scripts/install_topometrics.sh` (see README.md Quickstart).
+Everything that depends on its API lives here.
 
     Score = 0.30*TopoScore + 0.35*SurfaceDice@2.0 + 0.35*VOI_score
 
@@ -69,7 +70,7 @@ def load_metric_module():
     raise MetricUnavailable(
         "Official metric package not found (tried: "
         + ", ".join(_CANDIDATE_MODULES)
-        + "). Install it with:\n    bash scripts/setup_metric.sh"
+        + "). Install it with:\n    bash packages/vesuvius_evaluation/scripts/install_topometrics.sh"
     )
 
 

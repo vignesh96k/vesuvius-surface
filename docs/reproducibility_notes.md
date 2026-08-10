@@ -77,10 +77,9 @@ and checkable as a result of that lesson, not because of excess caution for its 
    actually installed and used for every real result in this repo, confirmed via
    `pip show nnunetv2` at the time of writing, not inferred from a changelog.
 
-3. **Several older scripts under `scripts/` (predating this restructuring pass) still default
+3. **Some older scripts under `scripts/` (predating this restructuring pass) still default
    to this project's original development machine's absolute paths** (e.g.
-   `scripts/export_nnunet.py`'s `--data-root` default, `scripts/nnunet_predict.sh`'s
-   `nnUNet_raw`/`nnUNet_preprocessed`/`nnUNet_results` env-var defaults). These are not broken
+   `scripts/export_nnunet.py`'s `--data-root` default). These are not broken
    — every one of them is overridable via a CLI flag or environment variable, and the README's
    quickstart shows the override pattern — but they are not yet migrated to the
    `VESUVIUS_DATA_ROOT`-style convention used by the newer scripts/notebooks in this repo

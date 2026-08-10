@@ -87,7 +87,9 @@ official implementation ships as the Kaggle dataset
 requires the Betti-Matching-3D C++ submodule to be compiled:
 
 ```bash
-bash scripts/setup_metric.sh
+conda env create -f environment-eval.yml
+conda activate vesuvius_eval
+bash packages/vesuvius_evaluation/scripts/install_topometrics.sh
 ```
 
 The entry point is:
@@ -105,7 +107,8 @@ Scoring is slow — the competition warns a full run can take hours — so budge
 accordingly and prefer resumable, per-case scoring:
 
 ```bash
-python scripts/evaluate.py --predictions DIR --labels DIR --out reports/scores.jsonl
+python scripts/evaluation/score_model.py --gt-dir LABELS_DIR --pred-dir NAME=PREDICTIONS_DIR \
+    --workers 8 --out scores.pkl
 ```
 
 Note that the 1st-place team had **no local validation set** and tuned their
