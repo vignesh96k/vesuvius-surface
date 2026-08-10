@@ -277,11 +277,7 @@ the full story; this README covers setup and reproduction mechanics.
 
 ## Known limitations
 
-Full list with detail in `docs/reproducibility_notes.md`. Headline item: local LOSO scores
-hold out an *entire* scroll, so they validate the harder ~29% "genuinely novel scroll" portion
-of real grading (discovered via the competition's own discussion forum, not locally simulable
-otherwise) — the easier ~71% "novel case, familiar scroll" majority isn't directly tested by
-LOSO at all, since by construction its held-out scroll has zero presence in training.
+Full list with detail in `docs/reproducibility_notes.md`.
 
 ## Packaging notes
 
