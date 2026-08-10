@@ -28,10 +28,12 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from evaluation.harness import aggregate_by_scroll, discover_cases, evaluate_directory
-from evaluation.metric_adapter import MetricUnavailable
-from postprocess.first_place import FIRST_PLACE_STAGES, PostprocessConfig
-from postprocess.pipeline import run_directory
+from vesuvius_surface.evaluation.harness import aggregate_by_scroll, discover_cases, evaluate_directory
+from vesuvius_surface.evaluation.metric_adapter import MetricUnavailable
+from vesuvius_surface.postprocess.first_place import FIRST_PLACE_STAGES, PostprocessConfig
+from vesuvius_surface.postprocess.pipeline import run_directory
+from vesuvius_surface.postprocess.unmerge import UnmergeConfig
+from vesuvius_surface.postprocess import unmerge as unmerge_module
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,7 +45,20 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="If set, score the written masks with the official metric and "
-        "print the table in this same run.",
+        "print the table in this same run. Required when --method unmerge, "
+        "since accept/reject needs the metric to gate each cut.",
+    )
+    p.add_argument(
+        "--method",
+        choices=["first_place", "unmerge"],
+        default="first_place",
+        help="first_place: control chain only (default, unchanged behavior). "
+        "unmerge: run control, then the novelty metric-guided-unmerge layer on "
+        "top of it (src/postprocess/unmerge.py) -- detects thin merge bridges "
+        "the control leaves behind and cuts them only where the official metric "
+        "improves on that volume. Writes control/, unmerge_proposed/ (cut applied "
+        "unconditionally, for inspection), and unmerge_accepted/ (the gated "
+        "output) under --output.",
     )
     p.add_argument(
         "--through-stage",
@@ -73,6 +88,30 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--no-patching", action="store_true")
     p.add_argument("--no-plug", action="store_true")
     p.add_argument("--no-fill", action="store_true")
+    p.add_argument(
+        "--erosion-radius",
+        type=int,
+        default=1,
+        help="[unmerge] Ball radius used to find seed masses via erosion. "
+        "Calibrated against measured sheet thickness (see UnmergeConfig docstring) "
+        "-- 1 is the default; 2 erodes real sheets away entirely on this dataset.",
+    )
+    p.add_argument("--min-seed-size", type=int, default=100, help="[unmerge]")
+    p.add_argument("--min-piece-size", type=int, default=100, help="[unmerge]")
+    p.add_argument("--cut-width", type=int, default=1, help="[unmerge]")
+    p.add_argument(
+        "--min-score-delta",
+        type=float,
+        default=0.0,
+        help="[unmerge] Accept a volume's cut-set only if score improves by at "
+        "least this much (default: any non-negative improvement).",
+    )
+    p.add_argument(
+        "--max-candidates-per-volume",
+        type=int,
+        default=None,
+        help="[unmerge] Optional safety cap on cuts proposed per volume.",
+    )
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--no-resume", action="store_true")
@@ -156,6 +195,123 @@ def print_ablation_table(by_stage: dict[str, dict[str, dict[str, float]]]) -> No
         )
 
 
+def print_unmerge_delta_table(
+    control_summary: dict[str, dict[str, float]],
+    accepted_summary: dict[str, dict[str, float]],
+) -> None:
+    """One row per scroll: control vs unmerge_accepted, official metric only
+    (this is the novelty layer's own comparison, separate from the first-place
+    ablation table above)."""
+    print("\n=== unmerge vs control (novelty layer only) ===")
+    header = (
+        f"{'scroll':>10}  {'n':>4}  {'ctrl_SCORE':>10}  {'unm_SCORE':>10}  {'dSCORE':>8}  "
+        f"{'ctrl_merge':>10}  {'unm_merge':>10}  {'dMERGE':>8}"
+    )
+    print(header)
+    print("-" * len(header))
+    for scroll in control_summary:
+        if scroll not in accepted_summary:
+            continue
+        c, a = control_summary[scroll], accepted_summary[scroll]
+        print(
+            f"{scroll:>10}  {int(c['n']):>4}  "
+            f"{c['score']:>10.4f}  {a['score']:>10.4f}  {a['score'] - c['score']:>+8.4f}  "
+            f"{c['voi_merge']:>10.4f}  {a['voi_merge']:>10.4f}  {a['voi_merge'] - c['voi_merge']:>+8.4f}"
+        )
+
+
+def run_unmerge_method(args: argparse.Namespace) -> int:
+    """--method unmerge: control, then the metric-guided-unmerge novelty layer
+    on top of it. Separate function so this path stays clearly distinct from
+    the first_place-only path above, matching "novelty on top of control, not
+    a reimplementation of it"."""
+    if args.labels is None:
+        print("ERROR: --method unmerge requires --labels (accept/reject needs the metric)",
+              file=sys.stderr)
+        return 1
+
+    cfg = PostprocessConfig(
+        min_component_size=args.min_component_size,
+        closing_radius=args.closing_radius,
+        connectivity=args.connectivity,
+        enable_closing=not args.no_closing,
+        enable_patching=not args.no_patching,
+        enable_hole_plugging=not args.no_plug,
+        enable_fill_holes=not args.no_fill,
+        threshold=args.threshold,
+    )
+    control_dir = args.output / "control"
+    written = run_directory(
+        args.predictions,
+        control_dir,
+        config=cfg,
+        through_stage="fill",
+        limit=args.limit,
+        overwrite=args.overwrite,
+    )
+    print(f"[control] wrote {len(written)} file(s) -> {control_dir}")
+
+    unmerge_cfg = UnmergeConfig(
+        erosion_radius=args.erosion_radius,
+        min_seed_size=args.min_seed_size,
+        min_piece_size=args.min_piece_size,
+        cut_width=args.cut_width,
+        connectivity=args.connectivity,
+        min_score_delta=args.min_score_delta,
+        max_candidates_per_volume=args.max_candidates_per_volume,
+    )
+    unmerge_summary = unmerge_module.run_directory(
+        control_dir,
+        args.labels,
+        args.output,
+        config=unmerge_cfg,
+        limit=args.limit,
+        overwrite=args.overwrite,
+    )
+    print(
+        f"[unmerge] {unmerge_summary['n_volumes']} volume(s), "
+        f"{unmerge_summary['n_volumes_with_candidate_cuts']} with candidate cuts, "
+        f"{unmerge_summary['n_volumes_accepted']} accepted"
+    )
+
+    scroll_map = load_scroll_map(args.scroll_groups)
+    scores_root = args.scores_out or (args.output / "scores")
+    scores_root.mkdir(parents=True, exist_ok=True)
+
+    try:
+        control_summary = score_dir(
+            control_dir, args.labels, scores_root / "control.jsonl",
+            scroll_map=scroll_map, limit=args.limit, resume=not args.no_resume,
+        )
+        accepted_summary = score_dir(
+            args.output / "unmerge_accepted", args.labels, scores_root / "unmerge_accepted.jsonl",
+            scroll_map=scroll_map, limit=args.limit, resume=not args.no_resume,
+        )
+    except MetricUnavailable as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+    print_scroll_table(control_summary, "control")
+    print_scroll_table(accepted_summary, "unmerge_accepted")
+    print_unmerge_delta_table(control_summary, accepted_summary)
+
+    table_path = scores_root / "unmerge_vs_control_summary.json"
+    table_path.write_text(
+        json.dumps(
+            {
+                "control": control_summary.get("ALL", {}),
+                "unmerge_accepted": accepted_summary.get("ALL", {}),
+                "unmerge_run_summary": unmerge_summary,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"\nsummary json: {table_path}")
+    return 0
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(
@@ -169,6 +325,9 @@ def main() -> int:
     if args.labels is not None and not args.labels.is_dir():
         print(f"ERROR: labels dir not found: {args.labels}", file=sys.stderr)
         return 1
+
+    if args.method == "unmerge":
+        return run_unmerge_method(args)
 
     cfg = PostprocessConfig(
         min_component_size=args.min_component_size,

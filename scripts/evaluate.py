@@ -25,8 +25,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from evaluation.harness import aggregate_by_scroll, discover_cases, evaluate_directory
-from evaluation.metric_adapter import MetricUnavailable
+from vesuvius_surface.evaluation.harness import aggregate_by_scroll, discover_cases, evaluate_directory
+from vesuvius_surface.evaluation.metric_adapter import MetricUnavailable
 
 
 def parse_args() -> argparse.Namespace:

@@ -1,0 +1,37 @@
+name: vesuvius
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy=1.26.4
+  - scipy=1.15.3
+  - pandas
+  - pyyaml
+  - matplotlib
+  - pillow
+  - opencv
+  - jupyter
+  - ipykernel
+  - tifffile
+  - tqdm
+  - pytorch=2.6.0
+  - pytorch-cuda=12.4
+  - torchvision
+  - pip:
+      - kaggle
+      - nnunetv2==2.8.1
+
+# This is the training/inference environment: nnU-Net, torch, and everything under
+# src/vesuvius_surface/. It is deliberately kept SEPARATE from environment-eval.yml.
+#
+# Why two environments, not one: the official leaderboard-equivalent scorer (packages/
+# vesuvius_evaluation) pins its own, older numpy/scipy versions to match the organizer's
+# compiled Betti-Matching-3D C++ extension. Installing those pins into this environment
+# risks a numpy 2.x<->1.x-style ABI break that can silently corrupt torch's own compiled
+# extensions -- this is not a hypothetical, it is a documented real crash from earlier in
+# this project (see docs/reproducibility_notes.md). Keep the two environments separate;
+# do not "clean this up" into one env.

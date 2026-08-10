@@ -13,7 +13,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.nnunet_export import export_nnunet_dataset, write_scroll_holdout_split
+from vesuvius_surface.data.nnunet_export import export_nnunet_dataset, write_scroll_holdout_split
 
 
 def parse_args() -> argparse.Namespace:

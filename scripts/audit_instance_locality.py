@@ -29,10 +29,10 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.io import load_volume
-from data.nnunet_splits import list_case_ids
-from data.schema import LABEL_SURFACE
-from training.affinity import (
+from vesuvius_surface.data.io import load_volume
+from vesuvius_surface.data.nnunet_splits import list_case_ids
+from vesuvius_surface.data.schema import LABEL_SURFACE
+from vesuvius_surface.training.affinity import (
     DEFAULT_AFFINITY_OFFSETS,
     LONG_RANGE_OFFSETS,
     NEAREST_NEIGHBOUR_OFFSETS,
@@ -86,7 +86,7 @@ def disagreement_rate(
     # the cropped volume instances in.
     fake_seg = np.where(vol_crop > 0, LABEL_SURFACE, 0).astype(patch_seg.dtype)
     # Preserve ignore from the real patch so the validity masks match.
-    from data.schema import LABEL_IGNORE
+    from vesuvius_surface.data.schema import LABEL_IGNORE
 
     fake_seg[patch_seg == LABEL_IGNORE] = LABEL_IGNORE
     volume_level = affinity_targets(fake_seg, offsets=offsets, instances=vol_crop)

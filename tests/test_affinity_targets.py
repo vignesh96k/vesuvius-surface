@@ -26,8 +26,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.schema import LABEL_BG, LABEL_IGNORE, LABEL_SURFACE
-from training.affinity import (
+from vesuvius_surface.data.schema import LABEL_BG, LABEL_IGNORE, LABEL_SURFACE
+from vesuvius_surface.training.affinity import (
     AFFINITY_INVALID,
     DEFAULT_AFFINITY_OFFSETS,
     NEAREST_NEIGHBOUR_OFFSETS,

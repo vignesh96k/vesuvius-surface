@@ -91,7 +91,7 @@ def shim_contents() -> str:
 
         from __future__ import annotations
 
-        from training.trainers import (
+        from vesuvius_surface.training.trainers import (
             {", ".join(TRAINER_NAMES)}
         )
 

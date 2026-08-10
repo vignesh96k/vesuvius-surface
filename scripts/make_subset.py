@@ -23,8 +23,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from data.nnunet_export import materialize_case_subset
-from data.nnunet_splits import resolve_splits
+from vesuvius_surface.data.nnunet_export import materialize_case_subset
+from vesuvius_surface.data.nnunet_splits import resolve_splits
 
 
 def parse_args() -> argparse.Namespace:

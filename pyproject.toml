@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vesuvius-surface"
+version = "0.1.0"
+description = "Vesuvius Challenge Surface Detection: nnU-Net-based 3D papyrus-sheet segmentation, training/evaluation/postprocessing pipeline."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "numpy==1.26.4",
+    "scipy==1.15.3",
+    "pandas",
+    "pyyaml",
+    "tifffile",
+    "tqdm",
+    "matplotlib",
+]
+
+# torch, torchvision, and nnunetv2 are intentionally NOT listed here: they have
+# system/CUDA-level components managed by conda (see environment-train.yml), and pulling
+# them via plain pip risks resolving a CUDA build that doesn't match the machine. Install
+# the conda env first, then `pip install -e .` for this package's own pure-Python code.
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "gpu: requires a GPU and/or the full training environment (excluded from CI)",
+    "manual: requires real data/checkpoints and is not automated (excluded from CI)",
+]
+testpaths = ["tests/unit"]
