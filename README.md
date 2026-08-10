@@ -80,7 +80,11 @@ python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
 
 Leave-one-scroll-out, backed by real literature on same-scan leakage in medical imaging
 (Yagis et al. 2021 *Sci Rep*; Varoquaux & Cheplygina 2022 *npj Digital Medicine*) —
-same-scroll cases are likely spatially correlated.
+same-scroll cases are likely spatially correlated. Scroll 26010 specifically: step 2's EDA
+showed the 6 scrolls range from 13 to 376 volumes each, and 26010's 129 is a mid-sized
+scroll — large enough for a statistically trustworthy 129-case held-out set, without
+removing a disruptive share of training data the way holding out 34117 (376 volumes,
+nearly half the dataset) would.
 
 ### 4. Auditing the split
 
