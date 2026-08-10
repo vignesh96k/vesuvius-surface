@@ -45,6 +45,8 @@ from vesuvius_surface.postprocess.first_place import FIRST_PLACE_STAGES, Postpro
 from vesuvius_surface.postprocess.pipeline import run_directory
 from vesuvius_surface.postprocess.unmerge import UnmergeConfig
 from vesuvius_surface.postprocess import unmerge as unmerge_module
+from vesuvius_surface.postprocess.bridge import BridgeConfig
+from vesuvius_surface.postprocess import bridge as bridge_module
 
 
 def parse_args() -> argparse.Namespace:
@@ -61,7 +63,7 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--method",
-        choices=["first_place", "unmerge"],
+        choices=["first_place", "unmerge", "bridge"],
         default="first_place",
         help="first_place: control chain only (default, unchanged behavior). "
         "unmerge: run control, then the novelty metric-guided-unmerge layer on "
@@ -69,7 +71,12 @@ def parse_args() -> argparse.Namespace:
         "the control leaves behind and cuts them only where the official metric "
         "improves on that volume. Writes control/, unmerge_proposed/ (cut applied "
         "unconditionally, for inspection), and unmerge_accepted/ (the gated "
-        "output) under --output.",
+        "output) under --output. "
+        "bridge: run control, then the novelty metric-guided fragment-bridging "
+        "layer on top of it (src/postprocess/bridge.py) -- reconnects components "
+        "wrongly split apart (the opposite failure mode from unmerge) only where "
+        "the official metric doesn't decrease. Writes control/, bridge_proposed/, "
+        "and bridge_accepted/ under --output.",
     )
     p.add_argument(
         "--through-stage",
@@ -123,6 +130,19 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="[unmerge] Optional safety cap on cuts proposed per volume.",
     )
+    p.add_argument("--max-gap", type=float, default=12.0, help="[bridge] Max voxel distance "
+                    "between candidate surface points.")
+    p.add_argument("--angle-tol-deg", type=float, default=60.0, help="[bridge] Max angle "
+                    "between each side's local tangent and the connecting ray.")
+    p.add_argument("--bridge-min-component-size", type=int, default=200,
+                    help="[bridge] Ignore components smaller than this.")
+    p.add_argument("--tangent-radius", type=float, default=6.0,
+                    help="[bridge] Local neighborhood radius for tangent estimation.")
+    p.add_argument("--tube-radius", type=int, default=1,
+                    help="[bridge] Dilation radius of the drawn bridge (0 = single-voxel line).")
+    p.add_argument("--bridge-min-score-delta", type=float, default=0.0,
+                    help="[bridge] Accept a volume's bridge-set only if score does not "
+                    "decrease by more than this (default: any non-negative improvement).")
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--no-resume", action="store_true")
@@ -336,6 +356,124 @@ def run_unmerge_method(args: argparse.Namespace) -> int:
     return 0
 
 
+def print_bridge_delta_table(
+    control_summary: dict[str, dict[str, float]],
+    accepted_summary: dict[str, dict[str, float]],
+) -> None:
+    """One row per scroll: control vs bridge_accepted, official metric only (this is the
+    novelty layer's own comparison, separate from the first-place ablation table above)."""
+    print("\n=== bridge vs control (novelty layer only) ===")
+    header = (
+        f"{'scroll':>10}  {'n':>4}  {'ctrl_SCORE':>10}  {'brg_SCORE':>10}  {'dSCORE':>8}  "
+        f"{'ctrl_split':>10}  {'brg_split':>10}  {'dSPLIT':>8}"
+    )
+    print(header)
+    print("-" * len(header))
+    for scroll in control_summary:
+        if scroll not in accepted_summary:
+            continue
+        c, a = control_summary[scroll], accepted_summary[scroll]
+        print(
+            f"{scroll:>10}  {int(c['n']):>4}  "
+            f"{c['score']:>10.4f}  {a['score']:>10.4f}  {a['score'] - c['score']:>+8.4f}  "
+            f"{c['voi_split']:>10.4f}  {a['voi_split']:>10.4f}  {a['voi_split'] - c['voi_split']:>+8.4f}"
+        )
+
+
+def run_bridge_method(args: argparse.Namespace) -> int:
+    """--method bridge: control, then the metric-guided fragment-bridging novelty layer
+    on top of it. Mirrors run_unmerge_method's structure -- novelty on top of control,
+    not a reimplementation of it."""
+    if args.labels is None:
+        print("ERROR: --method bridge requires --labels (accept/reject needs the metric)",
+              file=sys.stderr)
+        return 1
+
+    cfg = PostprocessConfig(
+        min_component_size=args.min_component_size,
+        closing_radius=args.closing_radius,
+        connectivity=args.connectivity,
+        enable_closing=not args.no_closing,
+        enable_patching=not args.no_patching,
+        enable_hole_plugging=not args.no_plug,
+        enable_fill_holes=not args.no_fill,
+        threshold=args.threshold,
+    )
+    control_dir = args.output / "control"
+    written = run_directory(
+        args.predictions,
+        control_dir,
+        config=cfg,
+        through_stage="fill",
+        limit=args.limit,
+        overwrite=args.overwrite,
+    )
+    print(f"[control] wrote {len(written)} file(s) -> {control_dir}")
+
+    bridge_cfg = BridgeConfig(
+        max_gap=args.max_gap,
+        angle_tol_deg=args.angle_tol_deg,
+        min_component_size=args.bridge_min_component_size,
+        tangent_radius=args.tangent_radius,
+        tube_radius=args.tube_radius,
+        connectivity=args.connectivity,
+        min_score_delta=args.bridge_min_score_delta,
+    )
+    bridge_summary = bridge_module.run_directory(
+        control_dir,
+        args.labels,
+        args.output,
+        config=bridge_cfg,
+        limit=args.limit,
+        overwrite=args.overwrite,
+        workers=args.workers,
+    )
+    print(
+        f"[bridge] {bridge_summary['n_volumes']} volume(s), "
+        f"{bridge_summary['n_volumes_with_candidate_bridges']} with candidate bridges, "
+        f"{bridge_summary['n_volumes_accepted']} accepted"
+    )
+
+    scroll_map = load_scroll_map(args.scroll_groups)
+    scores_root = args.scores_out or (args.output / "scores")
+    scores_root.mkdir(parents=True, exist_ok=True)
+
+    try:
+        control_summary = score_dir(
+            control_dir, args.labels, scores_root / "control.jsonl",
+            scroll_map=scroll_map, limit=args.limit, resume=not args.no_resume,
+            workers=args.workers,
+        )
+        accepted_summary = score_dir(
+            args.output / "bridge_accepted", args.labels, scores_root / "bridge_accepted.jsonl",
+            scroll_map=scroll_map, limit=args.limit, resume=not args.no_resume,
+            workers=args.workers,
+        )
+    except MetricUnavailable as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+    print_scroll_table(control_summary, "control")
+    print_scroll_table(accepted_summary, "bridge_accepted")
+    print_bridge_delta_table(control_summary, accepted_summary)
+
+    table_path = scores_root / "bridge_vs_control_summary.json"
+    table_path.write_text(
+        json.dumps(
+            {
+                "control": control_summary.get("ALL", {}),
+                "bridge_accepted": accepted_summary.get("ALL", {}),
+                "bridge_run_summary": bridge_summary,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(f"\nsummary json: {table_path}")
+    return 0
+
+
 def main() -> int:
     args = parse_args()
     logging.basicConfig(
@@ -352,6 +490,8 @@ def main() -> int:
 
     if args.method == "unmerge":
         return run_unmerge_method(args)
+    if args.method == "bridge":
+        return run_bridge_method(args)
 
     cfg = PostprocessConfig(
         min_component_size=args.min_component_size,

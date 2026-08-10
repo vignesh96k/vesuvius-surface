@@ -24,6 +24,7 @@ explicitly below, not implied.
 | **Organizers' official metric** (`sohier/vesuvius-metric-resources` Kaggle dataset, wrapping `topometrics`) | The real leaderboard-equivalent scorer (Betti-Matching-3D based). | Installed and called with its own defaults, never reimplemented — `packages/vesuvius_evaluation/` and `src/vesuvius_surface/evaluation/`. |
 | **`sohier/vesuvius-2025-metric-demo`** | Organizers' own demo notebook for the metric. | `packages/vesuvius_evaluation/src/vesuvius_evaluation/official_score.py`'s `load_volume`/`score_single_tif` are ported near-verbatim (same params/defaults), with two purely operational deviations (documented in that file's own docstring: no offline-install wrapper since we have real internet, `tifffile` instead of `PIL` for I/O — neither changes scored values). |
 | **`jirkaborovec/replicate-lb-score-topology-aware-3d-surface-seg`** | A fast, non-official approximate Betti-number scorer. | Ported as the `approx` backend (`packages/vesuvius_evaluation/src/vesuvius_evaluation/approx_score.py`) — explicitly documented as not leaderboard-equivalent, for fast iteration only. |
+| **Vascular-segmentation gap-reconnection literature** ("Restoring Connectivity in Vascular Segmentation using a Learned Post-Processing Model", arXiv:2404.10506; "Retinal blood vessel segmentation by using the MS-LSDNet network and geometric skeleton reconnection method", ScienceDirect) | The general technique family — find ruptured/terminal points on separate fragments, test directional alignment between candidate pairs, connect the geometrically-best pairs. | Not ported code — the general idea (endpoint pairing + directional-ray test) informed the design of the metric-guided fragment-bridging novelty layer (`src/vesuvius_surface/postprocess/bridge.py`), implemented independently with this project's own geometry (nearest-surface-point pairing, not a skeleton graph — see `docs/decisions.md` decision 20 for why). |
 
 ## A correction worth stating plainly
 
@@ -41,6 +42,14 @@ Stated explicitly, for contrast with everything above:
   — not from any public source. Targets a real, measured blind spot in the reimplemented
   1st-place chain (it never severs a bridge fused between two components; `voi_merge` sits
   flat across every stage of that chain in this project's own ablation).
+- **The metric-guided fragment-bridging post-processing layer** (`src/vesuvius_surface/postprocess/bridge.py`)
+  — the opposite failure mode from unmerge (components wrongly split apart, not wrongly
+  fused), motivated by this project's own failure-case analysis and a real A2-vs-A3 Kaggle
+  comparison. Informed by the general endpoint-pairing technique family from vessel-
+  reconnection literature (see attribution row above), implemented independently with this
+  project's own nearest-surface-point geometry, not ported code. Real, validated gain on top
+  of the already-deployed, unconditional 1st-place pp stage: 0.5683 → 0.5691 (+0.0009,
+  full 129-case LOSO, gated the same way unmerge is).
 - **The last-layers-only cascade fine-tune strategy** (freeze all but the final decoder stage
   + deep-supervision heads, 0.07% of parameters trainable) — the one genuinely positive
   fine-tuning result of the project, arrived at only after three separate full-fine-tune

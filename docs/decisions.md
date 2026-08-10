@@ -496,6 +496,69 @@ top"); the pushed kernel `vigneshk96/vesuvius-cascade-lastlayers-1st-pp`.
 
 ---
 
+## 20. Fragment bridging: nearest-surface-point pairing, not full skeletonization
+
+**Context.** README.md step 6's failure-case analysis found the baseline's predicted sheets
+come out as visibly broken, discontinuous lines. The 1st-place control chain's height-map gap
+patching fills gaps *inside* a component; `unmerge.py` *splits* components wrongly fused
+together. Nothing bridges components wrongly split apart — the opposite gap from what
+`unmerge.py` already covers, motivated further by a real A2-vs-A3 Kaggle comparison showing
+the 1st-place pp stage's local LOSO gain doesn't hold uniformly on the real leaderboard split
+(public -0.0039, private +0.0046).
+
+**Alternative considered, actually tried first:** Full 3D `skeletonize()` per component, then
+find skeleton endpoints and estimate local tangents by walking the skeleton graph — the more
+standard approach in the vessel-reconnection literature this technique is grounded in (see
+`postprocess/bridge.py` module docstring for the real citations).
+
+**Decision:** Nearest-surface-point pairing via `scipy.spatial.cKDTree` (component-to-
+component, not all-pairs), with a local-neighborhood centroid pull-back for the tangent
+estimate instead of a skeleton graph walk.
+
+**Why:** Measured, not guessed: full `skeletonize()` on this project's own real predictions
+took 5-50s per component even after cropping to its own bounding box, because the largest real
+components span most of a 320^3 array. That's too slow to iterate with across 129 real cases.
+The nearest-surface-point design answers the same geometric question (are two components close
+and pointing at each other) using only fast, already-proven primitives (cKDTree queries,
+local array slicing) — real timing: full 129-case bridge proposal dropped from unfinished
+(minutes per case, some cases never completing in a 2-5 min test window) to ~15-20s per case.
+
+**Source:** `src/vesuvius_surface/postprocess/bridge.py` module docstring; two real per-case
+timing tests during development (54s+ with skeletonize on case 826588329, 17.65s with the
+nearest-surface-point redesign on the same case, same real candidates found).
+
+---
+
+## 21. Bridge accept/reject gate: on the composed, deployed state — not an oracle-gated intermediate
+
+**Context.** Testing whether gated bridging adds value beyond the already-established
+pipeline required deciding what "beyond" is measured against. An early version of this test
+gated the 1st-place pp stage *itself* against raw (accept pp's output per-case only if it beat
+raw), then measured bridging against that gated-pp baseline.
+
+**Alternative tried, then rejected as invalid:** Exactly that — oracle-gate every stage,
+including 1st-place pp. It produced a very large apparent pp gain (0.5671 → 0.5765, +0.0094)
+that did not match the real, established pp number anywhere else in this project (0.5671 →
+0.5683, +0.0012, README step 10).
+
+**Decision:** 1st-place pp is applied unconditionally (no gate), exactly matching how it is
+actually deployed in the real pipeline (and on the real Kaggle test set, where no ground truth
+exists to gate anything against). Only the *new* stage being evaluated (bridging) is gated,
+against the unconditional-pp output — the same discipline `unmerge.py` already uses for its
+own third-stage placement.
+
+**Why:** Oracle-gating a stage that is actually deployed unconditionally uses ground-truth
+information that doesn't exist at real inference time, silently inflating that stage's
+apparent contribution — caught by a sanity check that should always be run when composing
+gated stages: does the "control" number in the test match the real, already-reported number
+for that exact configuration? It didn't (0.5765 vs. 0.5683), which is what surfaced the bug.
+After the fix, the sanity check passed exactly (0.5683 both places) before trusting the
+composed result (0.5683 → 0.5691, +0.0009 for bridging on top).
+
+**Source:** Real numbers from both the flawed and corrected test runs, this session.
+
+---
+
 ## What this doc deliberately does *not* do: `min_score_delta=0.0`
 
 `UnmergeConfig.min_score_delta` defaults to `0.0` — a cut is accepted on *any* non-negative
