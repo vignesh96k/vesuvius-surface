@@ -1,15 +1,17 @@
-"""Config-driven, CLI-args rewrite of arunodhayan's cascade fine-tuning pipeline.
+"""Config-driven CLI for fine-tuning arunodhayan's cascade checkpoint via nnU-Net's standard
+-pretrained_weights transfer-learning mechanism.
 
-IMPORTANT -- read before using this to claim reproducibility of any reported result: the
-checkpoint this repo's experiment_summary.md actually reports numbers for (Phase 3, item 12 --
-the full arunodhayan highpass+skeleton-recall+affinity fine-tune) was produced by
-third_party/arunodhayan_source/train.py, a 1140-line hardcoded, notebook-derived script with
-no CLI and no config file. This module is a clean reimplementation of that script's core
-fine-tune invocation logic (prepare -> train -> predict), extracted by reading its source, NOT
-verified to reproduce its exact output bit-for-bit. Use this as a readable starting point for
-a *future* fine-tune run, driven by configs/finetune_cascade.yaml -- not as evidence of what
-actually happened. See docs/reproducibility_notes.md for the full, honest gap this represents,
-and see third_party/arunodhayan_source/README.md for the real script.
+IMPORTANT -- read before using this to claim reproducibility of any reported result: this is
+NOT a rewrite of third_party/arunodhayan_source/train.py -- that script contains none of item
+12's highpass/skeleton-recall/affinity logic (verified directly: zero matches for any of those
+terms in it); it's arunodhayan's *original* recipe that produced the zero-shot checkpoint item
+12 started from, not the fine-tune itself. The actual code that ran for Phase 3, item 12 (the
+full arunodhayan highpass+skeleton-recall+affinity fine-tune) is not present anywhere in this
+repo and could not be located -- see docs/reproducibility_notes.md item 1 for the full account
+of that gap. This module is instead written from scratch, from how nnU-Net's own
+-pretrained_weights transfer learning works generically (see run_finetune()'s docstring), as a
+readable starting point for a *future* fine-tune run driven by configs/finetune_cascade.yaml --
+not as a reconstruction of item 12 and not as evidence of what actually happened there.
 
 Also note (a real, separate, related gap): no ensembling/TTA-combination script exists
 anywhere in this project's history to reproduce how the real ensemble A/B ensemble

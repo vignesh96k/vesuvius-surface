@@ -35,17 +35,47 @@ and checkable as a result of that lesson, not because of excess caution for its 
 
 ## Known, real gaps — stated plainly, not silently worked around
 
-1. **The full arunodhayan fine-tune (Phase 3, item 12) is not reproducible from a clean
-   script.** The checkpoint this repo reports numbers for was produced by
-   `third_party/arunodhayan_source/train.py`, a 1140-line hardcoded, notebook-derived script
-   with no CLI and no config file — `os.environ["CUDA_VISIBLE_DEVICES"]` set at import time,
-   several dataset-name-baked-in absolute paths, a bare `full_pipeline(epochs=8000)` call at
-   the bottom. `configs/finetune_cascade.yaml` sat next to it during the real run but **was
-   never read by it** — that pairing is historical, not functional.
-   `src/vesuvius_surface/training/finetune/arunodhayan_cascade_driver.py` is a clean,
-   config-driven rewrite extracted by reading the original's logic, but it is **explicitly not
-   verified to reproduce the original's exact output**. The real script is vendored verbatim
-   in `third_party/arunodhayan_source/` as the honest record of what actually ran.
+1. **The full arunodhayan fine-tune (Phase 3, item 12) has no surviving training code at
+   all — corrected from an earlier, wrong version of this note.** An earlier pass of this
+   documentation claimed `third_party/arunodhayan_source/train.py` was "the script that
+   produced" item 12's checkpoint, with the gap being merely that it's hardcoded/unportable.
+   That claim didn't survive a direct check: `train.py` contains zero mentions of
+   "highpass"/"skeleton"/"affinity" anywhere, and its active `CUSTOM_TRAINER =
+   "nnUNetTrainer_RotFlip_ClDice_prob0.8_arun"` is arunodhayan's *original* ClDice/RotFlip
+   recipe — independently confirmed by `docs/attribution.md`'s own, separately-written
+   citation of that same recipe for a different purpose (the item 11 ablation,
+   `nnUNetTrainerSeeded_ClDice_ScheduleFree`). This script produced the **zero-shot
+   checkpoint** (Phase 2, item 8) that item 12 fine-tuned, not item 12's fine-tuned result
+   itself.
+
+   The actual training code for item 12 (highpass input + skeleton-recall + affinity loss,
+   hand-adapted for that one run, applied to both the fullres ensemble and the cascade) is not
+   present anywhere in this repo, in `third_party/`, or in the old `finetune/` working
+   directory it was vendored from. `research_log.md` §16 already admitted the real
+   orchestration (shell scripts wiring training/prediction/scoring for that overnight run) was
+   "not committed verbatim... disposable by construction" — this now appears to have taken the
+   trainer *code* itself with it, not just the orchestration around it. This is a real,
+   deeper gap than a portability issue: **item 12's exact training code cannot be reconstructed
+   without guessing**, and this project already has one real lesson (the m7 `fold='all'`
+   incident, above) about the cost of presenting a guessed reconstruction as evidence — so no
+   attempt was made to rebuild it.
+
+   What *does* survive and is independently reproducible: the individual loss components as
+   clean, tested, from-scratch trainer classes (`nnUNetTrainerSkeletonRecall`,
+   `nnUNetTrainerAffinity`, `nnUNetTrainerSkeletonRecallAffinity`), and — more importantly —
+   the follow-up diagnostic that isolated skeleton-recall alone without highpass/affinity
+   (Phase 3, item 13, `nnUNetTrainerSkeletonRecall_20epochs`, real committed trainer class,
+   0.5768). That diagnostic supports the same conclusion item 12 pointed to (fine-tuning a
+   strong pretrained checkpoint carries real regression risk) and *is* fully reproducible.
+   `src/vesuvius_surface/training/finetune/arunodhayan_cascade_driver.py` is a generic
+   `-pretrained_weights` fine-tune entrypoint written from how nnU-Net transfer learning
+   works — not extracted from item 12's lost code, and explicitly not a reproduction of its
+   highpass+affinity recipe.
+
+   **Recommendation for reporting/presenting this project:** cite item 12's numbers as a real,
+   logged, cross-validated observation (cascade and ensemble both regressed consistently, and
+   the item-13 diagnostic independently corroborates the direction) — but if asked to defend
+   its reproducibility live, point to item 13 (fully reproducible) rather than item 12 itself.
 
 2. **No ensembling/TTA-combination script exists anywhere in this project's history.** The
    real A/B ensemble predictions (weights 0.65/0.35, matching arunodhayan's own hardcoded
