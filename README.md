@@ -27,8 +27,7 @@ add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
 cases), scored with the real leaderboard-equivalent metric. "Net-neutral" (A4/B4): the unmerge
 layer passes real per-volume accept gates on both lines (19/129 and 38/129 respectively), but
-the aggregate score across all 129 cases is unchanged to full float precision on both — a real,
-checked result, not an approximation.
+the aggregate score across all 129 cases is unchanged to full float precision on both.
 
 ## Quickstart
 
