@@ -32,59 +32,22 @@ and checkable as a result of that lesson, not because of excess caution for its 
   identical checkpoints. Re-running should land within noise of the reported numbers.
 - **The last-layers-only cascade fine-tune** (the one genuinely positive fine-tuning result).
   Same caveat: seeded, not bit-exact-deterministic.
+- **The full arunodhayan fine-tune (Phase 3, item 12)** — highpass input
+  (`scripts/data_prep/highpass.py`, `build_dataset102_*.py`) + skeleton-recall + affinity loss
+  (`nnUNetTrainerSkeletonRecallAffinity`, already a real, committed, tested trainer class),
+  applied via `-pretrained_weights` to both the fullres ensemble and the cascade. **Corrected
+  from an earlier, wrong version of this note**, which claimed this experiment's code no
+  longer existed anywhere — that conclusion came from an insufficiently thorough search (it
+  only checked for a dedicated trainer *class* named after the experiment, when the real
+  mechanism reused an existing one) and didn't survive a proper one: the real checkpoints
+  (`nnUNet_results_ensembleA_ft/`, `nnUNet_results_cascade_ft/`, both under
+  `Dataset102_VesuviusSurfaceHighpassOnly`) have `trainer_name=nnUNetTrainerSkeletonRecallAffinity`
+  embedded directly in their own metadata — real, checkable evidence, not inferred. See
+  `README.md` step 8 for the real commands.
 
 ## Known, real gaps — stated plainly, not silently worked around
 
-1. **The full arunodhayan fine-tune (Phase 3, item 12) has no surviving training code at
-   all — corrected from an earlier, wrong version of this note.** An earlier pass of this
-   documentation claimed `third_party/arunodhayan_source/train.py` was "the script that
-   produced" item 12's checkpoint, with the gap being merely that it's hardcoded/unportable.
-   That claim didn't survive a direct check: `train.py` contains zero mentions of
-   "highpass"/"skeleton"/"affinity" anywhere, and its active `CUSTOM_TRAINER =
-   "nnUNetTrainer_RotFlip_ClDice_prob0.8_arun"` is arunodhayan's *original* ClDice/RotFlip
-   recipe — independently confirmed by `docs/attribution.md`'s own, separately-written
-   citation of that same recipe for a different purpose (the item 11 ablation,
-   `nnUNetTrainerSeeded_ClDice_ScheduleFree`). This script produced the **zero-shot
-   checkpoint** (Phase 2, item 8) that item 12 fine-tuned, not item 12's fine-tuned result
-   itself.
-
-   The actual training code for item 12 (highpass input + skeleton-recall + affinity loss,
-   hand-adapted for that one run, applied to both the fullres ensemble and the cascade) is not
-   present anywhere in this repo, in `third_party/`, or in the old `finetune/` working
-   directory it was vendored from. `research_log.md` §16 already admitted the real
-   orchestration (shell scripts wiring training/prediction/scoring for that overnight run) was
-   "not committed verbatim... disposable by construction" — this now appears to have taken the
-   trainer *code* itself with it, not just the orchestration around it. This is a real,
-   deeper gap than a portability issue: **item 12's exact training code cannot be reconstructed
-   without guessing**, and this project already has one real lesson (the m7 `fold='all'`
-   incident, above) about the cost of presenting a guessed reconstruction as evidence — so no
-   attempt was made to rebuild it.
-
-   What *does* survive and is independently reproducible: the individual loss components as
-   clean, tested, from-scratch trainer classes (`nnUNetTrainerSkeletonRecall`,
-   `nnUNetTrainerAffinity`, `nnUNetTrainerSkeletonRecallAffinity`), and — more importantly —
-   the follow-up diagnostic that isolated skeleton-recall alone without highpass/affinity
-   (Phase 3, item 13, `nnUNetTrainerSkeletonRecall_20epochs`, real committed trainer class,
-   0.5768). That diagnostic supports the same conclusion item 12 pointed to (fine-tuning a
-   strong pretrained checkpoint carries real regression risk) and *is* fully reproducible.
-   `src/vesuvius_surface/training/finetune/arunodhayan_cascade_driver.py` is a generic
-   `-pretrained_weights` fine-tune entrypoint written from how nnU-Net transfer learning
-   works — not extracted from item 12's lost code, and explicitly not a reproduction of its
-   highpass+affinity recipe.
-
-   **Recommendation for reporting/presenting this project:** cite item 12's numbers as a real,
-   logged, cross-validated observation (cascade and ensemble both regressed consistently, and
-   the item-13 diagnostic independently corroborates the direction) — but if asked to defend
-   its reproducibility live, point to item 13 (fully reproducible) rather than item 12 itself.
-
-2. **No ensembling/TTA-combination script exists anywhere in this project's history.** The
-   real A/B ensemble predictions (weights 0.65/0.35, matching arunodhayan's own hardcoded
-   weights) were combined via ad-hoc code during the actual experiments, not a committed,
-   reusable tool. `scripts/inference/convert_previous_stage.py` covers the *cascade
-   previous-stage conversion* step that consumes an already-combined result, but not the
-   combination step itself.
-
-3. **The clean/TTA-consistent confirmatory run may not be finished.** The fast last-layers
+1. **The clean/TTA-consistent confirmatory run may not be finished.** The fast last-layers
    result (Phase 4, item 14) trained on non-TTA cascade previous-stage data (for speed) but
    was scored against a TTA-generated baseline — a real train/eval mismatch, caught and named
    rather than silently accepted. A second run using TTA-consistent data throughout was built
@@ -93,11 +56,11 @@ and checkable as a result of that lesson, not because of excess caution for its 
    real (the fine-tune only touches 0.07% of parameters, too little capacity to have learned
    to exploit the TTA/non-TTA statistical difference specifically) but not confirmed clean.
 
-4. **`nnunetv2` version pin.** Pinned to `2.8.1` in `environment-train.yml` — the version
+2. **`nnunetv2` version pin.** Pinned to `2.8.1` in `environment-train.yml` — the version
    actually installed and used for every real result in this repo, confirmed via
    `pip show nnunetv2` at the time of writing, not inferred from a changelog.
 
-5. **Several older scripts under `scripts/` (predating this restructuring pass) still default
+3. **Several older scripts under `scripts/` (predating this restructuring pass) still default
    to this project's original development machine's absolute paths** (e.g.
    `scripts/export_nnunet.py`'s `--data-root` default, `scripts/nnunet_predict.sh`'s
    `nnUNet_raw`/`nnUNet_preprocessed`/`nnUNet_results` env-var defaults). These are not broken
@@ -110,7 +73,7 @@ and checkable as a result of that lesson, not because of excess caution for its 
    than the consolidation work in this pass, given every affected script already has a working
    override mechanism.
 
-5. **`src/vesuvius_surface/evaluation/`'s wrapper duplication.** `metric_adapter.py` wraps the
+4. **`src/vesuvius_surface/evaluation/`'s wrapper duplication.** `metric_adapter.py` wraps the
    same underlying `topometrics` package that `packages/vesuvius_evaluation` also wraps, via a
    different (array-based vs. path-based) interface. Numerically identical — same
    `compute_leaderboard_score` call, same weights — so this is wrapper-interface duplication,

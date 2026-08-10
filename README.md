@@ -173,6 +173,29 @@ nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans \
 
 Result: 0.4629 vs. 0.5575 best from-scratch baseline (full 129-case LOSO) — a clear negative.
 
+Next: a full (unfrozen) fine-tune of arunodhayan's own checkpoint, adding a highpass input
+channel (`scripts/data_prep/highpass.py`, same transform as step 6) and the skeleton-recall +
+affinity losses (`nnUNetTrainerSkeletonRecallAffinity`, already used standalone in step 6):
+
+```bash
+python scripts/data_prep/build_dataset102_highpass_only.py   # writes Dataset102 (raw space)
+python scripts/data_prep/build_dataset102_fullres.py         # fills in its fullres preprocessed tree
+# Dataset102's plans (architecture/spacing) are identical to Dataset100's -- copy rather than
+# replan: cp $nnUNet_preprocessed/Dataset100_VesuviusSurface/nnUNetResEncUNetMPlans.json \
+#            $nnUNet_preprocessed/Dataset102_VesuviusSurfaceHighpassOnly/
+
+# Ensemble member (one of arunodhayan's two 3d_fullres models):
+nnUNetv2_train 102 3d_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
+    -pretrained_weights checkpoints/ensembleA_checkpoint_best.pth
+
+# Cascade (needs a previous-stage input directory first -- see
+# scripts/inference/convert_previous_stage.py, same tool used to build any cascade's
+# coarse-hint channel):
+nnUNetv2_train 102 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
+    -pretrained_weights checkpoints/Cascade_fullres_checkpoint_best.pth
+```
+
+Result: ensemble 0.7029 → 0.5172, cascade 0.7198 → 0.5208 — unambiguously negative on both.
 That result is why the next attempt freezes almost everything instead of fine-tuning fully:
 applying the same skeleton-recall recipe from step 6/7 to arunodhayan's cascade checkpoint,
 but training only the final decoder stage and deep-supervision heads (0.07% of parameters).
@@ -245,7 +268,6 @@ already-written predictions, no retraining needed) completes.
 ```
 src/vesuvius_surface/    training / data / eda / postprocess / evaluation code (pip install -e .)
 packages/vesuvius_evaluation/   the official scorer, its own installable package + own conda env
-third_party/              arunodhayan's real zero-shot training driver, vendored verbatim, not ours
 scripts/                  CLI entrypoints: data prep, training, inference, evaluation, downloads
 notebooks/                EDA, failure-case analysis, real Kaggle submission notebooks
 tests/                    unit/ (CI, no GPU/data needed) and functional/ (manual, needs both)
@@ -258,13 +280,11 @@ the full story; this README covers setup and reproduction mechanics.
 
 ## Known limitations
 
-Full list with detail in `docs/reproducibility_notes.md`. Headline items: no
-ensembling/TTA-combination script exists to reproduce how the real A/B ensemble predictions
-were combined; local LOSO scores hold out an *entire* scroll, so they validate the harder
-~29% "genuinely novel scroll" portion of real grading (discovered via the competition's own
-discussion forum, not locally simulable otherwise) — the easier ~71% "novel case, familiar
-scroll" majority isn't directly tested by LOSO at all, since by construction its held-out
-scroll has zero presence in training.
+Full list with detail in `docs/reproducibility_notes.md`. Headline item: local LOSO scores
+hold out an *entire* scroll, so they validate the harder ~29% "genuinely novel scroll" portion
+of real grading (discovered via the competition's own discussion forum, not locally simulable
+otherwise) — the easier ~71% "novel case, familiar scroll" majority isn't directly tested by
+LOSO at all, since by construction its held-out scroll has zero presence in training.
 
 ## Packaging notes
 
@@ -321,5 +341,5 @@ this, kept specifically because it's better evidence than a retrospective summar
 
 ## License
 
-MIT for original code in this repository — see `LICENSE`. Code under `third_party/` and
-checkpoints referenced in `docs/checkpoints.md` remain under their own original terms.
+MIT for original code in this repository — see `LICENSE`. Checkpoints referenced in
+`docs/checkpoints.md` remain under their own original terms.

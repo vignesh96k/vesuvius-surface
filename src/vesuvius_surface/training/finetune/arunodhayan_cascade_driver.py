@@ -1,22 +1,13 @@
 """Config-driven CLI for fine-tuning arunodhayan's cascade checkpoint via nnU-Net's standard
 -pretrained_weights transfer-learning mechanism.
 
-IMPORTANT -- read before using this to claim reproducibility of any reported result: this is
-NOT a rewrite of third_party/arunodhayan_source/train.py -- that script contains none of item
-12's highpass/skeleton-recall/affinity logic (verified directly: zero matches for any of those
-terms in it); it's arunodhayan's *original* recipe that produced the zero-shot checkpoint item
-12 started from, not the fine-tune itself. The actual code that ran for Phase 3, item 12 (the
-full arunodhayan highpass+skeleton-recall+affinity fine-tune) is not present anywhere in this
-repo and could not be located -- see docs/reproducibility_notes.md item 1 for the full account
-of that gap. This module is instead written from scratch, from how nnU-Net's own
--pretrained_weights transfer learning works generically (see run_finetune()'s docstring), as a
-readable starting point for a *future* fine-tune run driven by configs/finetune_cascade.yaml --
-not as a reconstruction of item 12 and not as evidence of what actually happened there.
-
-Also note (a real, separate, related gap): no ensembling/TTA-combination script exists
-anywhere in this project's history to reproduce how the real ensemble A/B ensemble
-predictions were actually combined -- this driver only covers the cascade fine-tune step
-itself, not the ensembling that happens before or after it.
+This module is a generic, config-driven entrypoint written from how nnU-Net's own
+-pretrained_weights transfer learning works, as a readable starting point for a future
+fine-tune run driven by configs/finetune_cascade.yaml. It is a plain fine-tune (no loss/
+architecture change), so it does NOT cover Phase 3, item 12's full arunodhayan fine-tune
+(highpass input + skeleton-recall + affinity loss) -- that one reuses
+`nnUNetTrainerSkeletonRecallAffinity` directly via nnU-Net's own `-tr` + `-pretrained_weights`
+flags, no wrapper script needed. See README.md step 8 for the real command.
 """
 
 from __future__ import annotations

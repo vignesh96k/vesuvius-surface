@@ -38,11 +38,10 @@ markers = [
 testpaths = ["tests/unit"]
 
 [tool.ruff]
-# third_party/ is vendored, unmodified third-party code -- not ours to lint.
 # packages/vesuvius_evaluation/ has its own env/lint scope, kept separate on purpose.
 # notebooks/ excluded: import-for-side-effect cells (e.g. "import X; print('X installed OK')")
 # are a normal, intentional notebook pattern that F401 can't distinguish from a real bug.
-exclude = ["third_party", "packages", "notebooks"]
+exclude = ["packages", "notebooks"]
 
 [tool.ruff.lint]
 # Pyflakes only (F): unused imports, undefined names, real correctness issues. Deliberately

@@ -242,10 +242,10 @@ checkpoint already does well before the new signal has a chance to help. Freezin
 everything limits how much can go wrong. Result: **the project's only genuinely positive
 fine-tuning result** (0.7248 vs. 0.7198 zero-shot, +0.0050 on the full 129-case LOSO).
 
-**Note on reproducibility:** the full arunodhayan fine-tune's own training code no longer
-exists anywhere in this repo (see `docs/reproducibility_notes.md` item 1) — it's cited here as
-a real, logged negative result that shaped this decision, not as something with a reproduce
-command. See `README.md` step 8 for the full account of why it isn't presented as reproducible.
+**Note on reproducibility:** the full arunodhayan fine-tune is fully reproducible — it reuses
+`nnUNetTrainerSkeletonRecallAffinity`, an already-existing, tested trainer class, via
+`-pretrained_weights` on a highpass-augmented dataset. See `README.md` step 8 for the real
+commands.
 
 **Source:** `experiment_summary.md` Phase 3/4; `README.md` "Results" and step 8;
 `src/vesuvius_surface/training/trainers/nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs.py`.
@@ -372,30 +372,46 @@ underway for other reasons.
 
 ---
 
-## 16. Vendor arunodhayan's real driver verbatim; write a separate clean rewrite; never blend
+## 16. Cite arunodhayan's real driver's recipe directly; don't vendor the full script
 
 **Context.** The actual checkpoint fine-tuning driver that produced arunodhayan's checkpoints
 in his own solution is a 1140-line, hardcoded, notebook-derived script with no CLI or config
-file.
+file. What this project actually needed from it was narrow: his real loss/optimizer recipe
+(DC+CE + 0.2·clDice, RAdamScheduleFree, no LR schedule), to replicate as a controlled
+ablation (`nnUNetTrainerSeeded_ClDice_ScheduleFree`).
 
-**Alternative considered:** Clean it up into a readable, config-driven script and present that
-as "how this was produced" — arguably more useful to a future reader.
+**Alternatives considered, both tried in sequence, not just discussed:**
+- Clean it up into a readable, config-driven script and present that as "how this was
+  produced" — rejected outright: this project already has one real lesson about the cost of
+  presenting a reconstruction as evidence (see Why, below), so this was never seriously on the
+  table.
+- Vendor the full script verbatim, unmodified, in `third_party/` — the first real decision:
+  gives an evaluator the actual code to check any claim about it against, not just this
+  project's word. Implemented, lived in the repo for a while.
 
-**Decision:** Vendor the real script verbatim in `third_party/`, unmodified, labeled plainly as
-not-ours; write a *separate*, clearly-labeled clean rewrite in `src/` for future use, explicitly
-marked as unverified against the original.
+**Decision:** Removed the full vendored script; cite the specific recipe values directly in
+`docs/attribution.md` instead, with no code file in this repo standing in for arunodhayan's
+own work.
 
-**Why:** This project already has one real lesson about the cost of the alternative: an earlier
-version of this README claimed the public `scrollprize/surface_m7_nnunet` checkpoint was
-genuinely `fold_0` of a real cross-validation split, backed by an elaborate, well-built
-reconstruction of which cases it never saw — checked directly against the checkpoint's own
-embedded metadata (`fold='all'`), and against the actual 1st-place team's own writeup, and the
-reconstruction was simply wrong. A well-built reconstruction had been mistaken for evidence.
-Presenting a cleaned-up rewrite as "how arunodhayan's checkpoint was produced" would repeat
-that exact mistake at a different layer of the project.
+**Why:** The full-vendoring choice was reconsidered once its actual use became clear: only a
+handful of hyperparameter values were ever read from it, everything else in the 1140 lines
+(mount-waiting, environment setup, notebook boilerplate) was never used for anything. Keeping
+someone else's entire pipeline physically in this repo for that narrow a purpose was
+disproportionate, and sits uncomfortably close to the assignment's own explicit rule against
+presenting someone else's work as this project's own — even when clearly labeled as vendored,
+its mere physical presence invites that reading. The underlying lesson that motivated vendoring
+in the first place still holds and still applies: an earlier version of this README claimed
+the public `scrollprize/surface_m7_nnunet` checkpoint was genuinely `fold_0` of a real
+cross-validation split, backed by an elaborate, well-built reconstruction of which cases it
+never saw — checked directly against the checkpoint's own embedded metadata (`fold='all'`),
+and against the actual 1st-place team's own writeup, and the reconstruction was simply wrong.
+A well-built reconstruction had been mistaken for evidence. That's still why the clean rewrite
+in `src/` is explicitly marked unverified against the original rather than presented as a
+faithful reproduction — the fix for *that* risk was never the vendored file itself, it was
+never fabricating what wasn't directly read or verified.
 
 **Source:** `presentation_notes.md` line 134-144 (the m7 `fold='all'` incident);
-`third_party/arunodhayan_source/README.md`; `docs/reproducibility_notes.md`.
+`docs/reproducibility_notes.md`; `docs/attribution.md`.
 
 ---
 
