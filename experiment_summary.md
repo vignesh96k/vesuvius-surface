@@ -122,9 +122,15 @@ to a real log line, not an estimate.
     partition the original component via nearest-seed Voronoi tessellation, cut the partition boundary,
     accept only if the official metric improves on that volume (never a per-cut heuristic).
     `erosion_radius` calibrated from a real distance-transform measurement (median sheet half-thickness
-    ~1 voxel), not guessed. Real run tonight on the full 129 cases (arunodhayan line): 25/129 volumes had
-    candidate cuts, 19/129 accepted by the score gate. Final aggregate score still computing as of this
-    writing (both the arunodhayan-line and our-own-line versions are running in the background).
+    ~1 voxel), not guessed. Full 129-case LOSO run (arunodhayan cascade-lastlayers + 1st-place pp
+    control line): 25/129 volumes had candidate cuts, 19/129 accepted by the per-volume score gate --
+    but the aggregate SCORE across all 129 cases is **unchanged to full float precision**
+    (0.6347071689500106 control vs. 0.6347071689500106 unmerge_accepted, delta +0.0000). Not a bug: the
+    accept gate only requires `delta >= 0.0` on a single volume, so accepted cuts can be individually
+    real but too small to move a 129-case mean at all. Honest read: net-neutral on this control line,
+    not a demonstrated win, despite a nonzero accept rate. The from-scratch-line (skeleton-recall 700ep)
+    version of this same run is still in progress -- see whether it lands differently before drawing a
+    final conclusion.
 
 ## Phase 6 — Real Kaggle submissions
 
