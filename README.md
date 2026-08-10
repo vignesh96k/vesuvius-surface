@@ -78,23 +78,7 @@ jupyter nbconvert --to notebook --execute notebooks/01_dataset_overview.ipynb
 python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
 ```
 
-### 4. Validate the split — and why arunodhayan/m7 can't be used for experimentation
-
-```bash
-python scripts/verify_split.py
-```
-
-This is the step that mattered most for everything after it: checking whether the public
-`arunodhayan` (3rd place) and `scrollprize/surface_m7_nnunet` (1st place) checkpoints have a
-real, usable held-out fold. They don't — both teams' own writeups state they trained on
-100% of the data ("we abandoned the traditional K-Fold cross-validation... trained directly
-on the entire dataset"), and m7's checkpoint metadata confirms `fold='all'` directly rather
-than the `fold_0` its filename implies. **Consequence: no local score against either
-checkpoint is a clean generalization estimate** — which is exactly why step 5 trains a
-from-scratch baseline against a split we authored ourselves, rather than trusting either
-public checkpoint's own reported numbers.
-
-### 5. Train the from-scratch baseline
+### 4. Train the from-scratch baseline
 
 ```bash
 export nnUNet_raw=... nnUNet_preprocessed=... nnUNet_results=...
@@ -113,7 +97,7 @@ nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSeeded
 
 Result: 0.5597 local LOSO, real submission 0.50962 public / 0.51693 private.
 
-### 6. 100-epoch comparison — pick a loss/architecture winner
+### 5. 100-epoch comparison — pick a loss/architecture winner
 
 ```bash
 nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecall_100epochs    # winner: 0.5307
@@ -138,7 +122,7 @@ nnUNetv2_train 102 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainer_100ep
 
 Skeleton-recall (Kirchhoff et al., ECCV 2024, ported as `nnUNetTrainerSkeletonRecall`) won.
 
-### 7. Extend the winner: skeleton-recall to 700 epochs (our own line)
+### 6. Extend the winner: skeleton-recall to 700 epochs (our own line)
 
 ```bash
 nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecall_700epochs
@@ -148,17 +132,16 @@ Result: 0.5671 local LOSO (vs. 0.5597 no-skeleton-recall baseline at the same sc
 clearest direct evidence in this project that skeleton-recall's loss term does what it's
 designed to do (toposcore 0.2021 → 0.3028, +50% relative).
 
-Submitted to Kaggle with 1st-place postprocessing applied (step 9 below): **0.54063 public /
+Submitted to Kaggle with 1st-place postprocessing applied (step 8 below): **0.54063 public /
 0.56231 private**. The competition's real deadline (2026-02-27) has long passed, so this
 isn't an official rank, but checked against the frozen final leaderboard for reference: the
 private score would place **#395 of 1392 (top 28.4%)**.
 
-### 8. Fine-tuning: STU-Net first, then arunodhayan's last layers
+### 7. Fine-tuning: STU-Net first, then arunodhayan's last layers
 
 Fine-tuning starts with STU-Net (TotalSegmentator-pretrained), chosen specifically because
-it has none of the leakage problem from step 4 — it's provably never seen a Vesuvius volume,
-so fine-tuning it against our own authored split is a genuinely clean comparison, unlike
-arunodhayan's or m7's checkpoints.
+it's provably never seen a Vesuvius volume, so fine-tuning it against our own authored split
+is a genuinely clean comparison, unlike arunodhayan's or m7's checkpoints.
 
 ```bash
 bash scripts/setup_stunet.sh --model base
@@ -170,8 +153,8 @@ nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans \
 Result: 0.4629 vs. 0.5575 best from-scratch baseline (full 129-case LOSO) — a clear negative.
 
 Next: a full (unfrozen) fine-tune of arunodhayan's own checkpoint, adding a highpass input
-channel (`scripts/data_prep/highpass.py`, same transform as step 6) and the skeleton-recall +
-affinity losses (`nnUNetTrainerSkeletonRecallAffinity`, already used standalone in step 6):
+channel (`scripts/data_prep/highpass.py`, same transform as step 5) and the skeleton-recall +
+affinity losses (`nnUNetTrainerSkeletonRecallAffinity`):
 
 ```bash
 python scripts/data_prep/build_dataset102_highpass_only.py   # writes Dataset102 (raw space)
@@ -193,7 +176,7 @@ nnUNetv2_train 102 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrai
 
 Result: ensemble 0.7029 → 0.5172, cascade 0.7198 → 0.5208 — unambiguously negative on both.
 That result is why the next attempt freezes almost everything instead of fine-tuning fully:
-applying the same skeleton-recall recipe from step 6/7 to arunodhayan's cascade checkpoint,
+applying the same skeleton-recall recipe from step 5/6 to arunodhayan's cascade checkpoint,
 but training only the final decoder stage and deep-supervision heads (0.07% of parameters).
 
 ```bash
@@ -208,7 +191,7 @@ nnUNetv2_train 100 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans \
 Result: 0.7248 local LOSO vs. 0.7198 zero-shot (**+0.0050**) — the project's one genuinely
 positive fine-tuning result.
 
-### 9. 1st-place postprocessing, both lines
+### 8. 1st-place postprocessing, both lines
 
 A *different* team's technique (they placed 1st, not 3rd — see `docs/attribution.md`),
 reimplemented from their writeup: remove small components → per-sheet closing → height-map
@@ -227,7 +210,7 @@ python scripts/run_postprocess.py --method first_place --workers 8 \
 
 Results: our line 0.5671 → 0.5683 (+0.0012); arunodhayan line 0.7248 → 0.7363 (+0.0115).
 
-### 10. Metric-guided unmerge (novelty), both lines
+### 9. Metric-guided unmerge (novelty), both lines
 
 This project's own contribution, not from any public source (see `docs/attribution.md`).
 Motivated by a direct ablation finding: `voi_merge` sits essentially flat across every stage
