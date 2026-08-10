@@ -78,10 +78,6 @@ jupyter nbconvert --to notebook --execute notebooks/01_dataset_overview.ipynb
 python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
 ```
 
-Holds out scroll 26010 (129 volumes) entirely — never seen during training. This is what
-makes local scores a genuine generalization estimate rather than "another region of a
-familiar scroll."
-
 ### 4. Validate the split — and why arunodhayan/m7 can't be used for experimentation
 
 ```bash
