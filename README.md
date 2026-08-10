@@ -173,14 +173,16 @@ against the frozen final leaderboard, it would place **#395 of 1392 (top 28.4%)*
 
 Fine-tuning starts with STU-Net (TotalSegmentator-pretrained): provably never seen a Vesuvius
 volume, so fine-tuning it against our own split is a genuinely clean comparison — unlike
-arunodhayan's or m7's checkpoints. All layers unfrozen (58M params, full fine-tune, just a
-lower initial LR — 1e-3 vs. the 1e-2 from-scratch default) — the later last-layers-only
-approach below only came after this and the full arunodhayan fine-tune both went negative.
+arunodhayan's or m7's checkpoints. Only the two shallowest encoder stages
+(`conv_blocks_context.0`, `.1` — generic edge/texture features, most likely to transfer across
+domains) are frozen; the deeper encoder stages and the entire decoder (110 of 130 parameter
+tensors) stay trainable, so the domain-specific "body anatomy" semantics STU-Net's pretraining
+learned get relearned for thin-sheet detection:
 
 ```bash
-bash scripts/setup_stunet.sh --model base
-nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans \
-    -tr STUNetTrainer_base_ft_30epochs \
+# weights: HuggingFace ziyanhuang/STU-Net -- see docs/checkpoints.md
+python scripts/finetune/run_finetuning_stunet_freeze_early.py 100 3d_lowres 0 \
+    -p nnUNetResEncUNetMPlans -tr STUNetTrainer_base_ft_30epochs \
     -pretrained_weights checkpoints/stunet_base.model
 ```
 

@@ -15,7 +15,7 @@ them. `scripts/download_weights.sh` assumes they're public.
 |---|---|---|
 | arunodhayan's cascade (2 fullres models + cascade refinement) | Kaggle datasets/models `arunodhayan/cascade`, `arunodhayan/cascade-updated` | Zero-shot reference (Phase 2, item 8); base for every fine-tune attempt in Phase 3/4 |
 | `scrollprize/surface_m7_nnunet` | HuggingFace, Apache-2.0 | Zero-shot reference only (Phase 2, item 9) |
-| STU-Net-B (TotalSegmentator-pretrained) | Original STU-Net repo | Base for the fine-tune negative result (Phase 3, item 10) |
+| STU-Net-B (TotalSegmentator-pretrained, 58M params) | HuggingFace `ziyanhuang/STU-Net`, shortest `base`-matching `.model` file (`huggingface_hub.hf_hub_download`) | Base for the fine-tune negative result (Phase 3, item 10) — see `scripts/finetune/run_finetuning_stunet_freeze_early.py` |
 
 ## This project's own trained checkpoints (Kaggle Datasets, private as of writing)
 

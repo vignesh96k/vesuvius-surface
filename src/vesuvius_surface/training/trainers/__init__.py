@@ -61,6 +61,20 @@ from vesuvius_surface.training.trainers.nnUNetTrainerSkeletonRecallCascadeLastLa
 from vesuvius_surface.training.trainers.nnUNetTrainerSkeletonRecallCascadeLastLayers_1epoch import (
     nnUNetTrainerSkeletonRecallCascadeLastLayers_1epoch,
 )
+from vesuvius_surface.training.trainers.STUNetTrainer import (
+    STUNetTrainer,
+    STUNetTrainer_base,
+    STUNetTrainer_base_ft,
+    STUNetTrainer_huge,
+    STUNetTrainer_huge_ft,
+    STUNetTrainer_large,
+    STUNetTrainer_large_ft,
+    STUNetTrainer_small,
+    STUNetTrainer_small_ft,
+)
+from vesuvius_surface.training.trainers.STUNetTrainer_base_ft_30epochs import (
+    STUNetTrainer_base_ft_30epochs,
+)
 
 __all__ = [
     "nnUNetTrainerAffinity",
@@ -87,4 +101,14 @@ __all__ = [
     "nnUNetTrainerSkeletonRecallAffinity_1epoch",
     "nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs",
     "nnUNetTrainerSkeletonRecallCascadeLastLayers_1epoch",
+    "STUNetTrainer",
+    "STUNetTrainer_base",
+    "STUNetTrainer_base_ft",
+    "STUNetTrainer_base_ft_30epochs",
+    "STUNetTrainer_huge",
+    "STUNetTrainer_huge_ft",
+    "STUNetTrainer_large",
+    "STUNetTrainer_large_ft",
+    "STUNetTrainer_small",
+    "STUNetTrainer_small_ft",
 ]

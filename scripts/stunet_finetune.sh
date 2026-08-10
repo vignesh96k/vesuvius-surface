@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# SUPERSEDED: the real Phase 3 item-10 result did not use this script or STU-Net's own
+# vendored nnU-Net-2.2 fork runner below -- it used the project's own installed nnunetv2
+# via scripts/finetune/run_finetuning_stunet_freeze_early.py (see README.md step 9). Kept
+# for reference only.
+#
 # Fine-tune STU-Net on our dataset against a split we authored.
 #
 # Run this inside the isolated STU-Net env created by scripts/setup_stunet.sh.

@@ -53,6 +53,16 @@ TRAINER_NAMES = (
     "nnUNetTrainerSeeded_100epochs",
     "nnUNetTrainerSeeded_ClDice_ScheduleFree",
     "nnUNetTrainerSeeded_ClDice_ScheduleFree_350epochs",
+    "STUNetTrainer",
+    "STUNetTrainer_small",
+    "STUNetTrainer_small_ft",
+    "STUNetTrainer_base",
+    "STUNetTrainer_base_ft",
+    "STUNetTrainer_base_ft_30epochs",
+    "STUNetTrainer_large",
+    "STUNetTrainer_large_ft",
+    "STUNetTrainer_huge",
+    "STUNetTrainer_huge_ft",
 )
 
 

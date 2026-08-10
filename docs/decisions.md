@@ -226,7 +226,7 @@ assumed necessary.
 was the obvious first thing to try on top of a strong pretrained checkpoint.
 
 **Alternatives considered, all real, all tried before this one, all negative:**
-- STU-Net full fine-tune (leak-free target): 0.4629 vs. 0.5575 baseline.
+- STU-Net fine-tune, early encoder layers frozen (leak-free target): 0.4629 vs. 0.5575 baseline.
 - The 5-way loss/architecture comparison retried as a full cascade fine-tune.
 - Full (unfrozen) arunodhayan fine-tune — highpass input + skeleton-recall + affinity loss,
   applied to both the ensemble and the cascade: cascade 0.7198→0.5208, ensemble 0.7029→0.5172,
