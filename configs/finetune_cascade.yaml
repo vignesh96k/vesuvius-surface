@@ -1,0 +1,34 @@
+# Fine-tuning config for arunodhayan's cascade checkpoint (3rd place) -- consumed by
+# src/vesuvius_surface/training/finetune/arunodhayan_cascade_driver.py.
+#
+# Both the lowres and cascade checkpoints are required: the cascade stage consumes the
+# lowres stage's own predictions on the training set as an extra input channel, so it
+# cannot run/fine-tune standalone. See docs/checkpoints.md for where to download both from.
+#
+# NOTE (see docs/reproducibility_notes.md): the checkpoint this repo actually reports numbers
+# for was produced by third_party/arunodhayan_source/train.py, a hardcoded script that never
+# read a config file at all. This yaml describes the *intended* config for future runs via
+# the clean driver below -- it is not a record of what actually happened.
+
+paths:
+  input_dir: "${VESUVIUS_DATA_ROOT}"                    # see docs/data.md; VESUVIUS_DATA_ROOT env var, no absolute default
+  working_dir: "${VESUVIUS_SCRATCH_DIR:-/tmp/vesuvius_training_scratch}"   # ephemeral nnUNet_raw/nnUNet_preprocessed
+  output_dir: "outputs/finetune_run"                    # relative to repo root; own root, kept separate from other rungs' outputs
+
+dataset:
+  dataset_id: 100
+
+training:
+  fold: 0                                 # LOSO split, scroll 26010 held out -- see docs/reproducibility_notes.md
+  configuration: "3d_cascade_fullres"
+  planner: "nnUNetPlannerResEncM"
+  plans_name: "nnUNetResEncUNetMPlans"
+  num_workers: null
+  epochs: 10                              # matches the only real cascade fine-tune result reported (last-layers, 10 epochs)
+  command_timeout: null
+  num_gpus: null
+  seed: 42
+
+pretrained:
+  lowres_checkpoint: "checkpoints/3dlowres_checkpoint_best.pth"
+  cascade_checkpoint: "checkpoints/Cascade_fullres_checkpoint_best.pth"
