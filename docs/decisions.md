@@ -54,8 +54,9 @@ correct split, so re-checking it could look like second-guessing a sound decisio
 **Decision:** Ran 3 independent stratified 80/20 folds as a cross-check, not as a candidate
 replacement methodology.
 
-**Why:** Convergent evidence beats a single point estimate. All 3 folds landed within ~0.01 of
-each other (0.5162 / 0.5079 / 0.5051) — real evidence the split wasn't a fluke, not assumed.
+**Why:** Convergent evidence beats a single point estimate. All 3 folds (0.5079 / 0.5051 /
+0.5084) landed within 0.0033 of each other, and within 0.0111 of the LOSO number itself
+(0.5162) — real evidence the split wasn't a fluke, not assumed.
 When asked to cut this from 5 folds to 3 for time, agreed: each stratified fold is already an
 independent, valid split, so running fewer is a legitimate compute trade-off, not a methodology
 change.

@@ -91,8 +91,9 @@ python scripts/make_scroll_split.py --mode stratified --n-splits 3
 ```
 
 3 independent stratified 80/20 folds, each trained the same way as step 5's 100-epoch
-baseline, landed within ~0.01 of each other (0.5162 / 0.5079 / 0.5051) — real convergent
-evidence the LOSO number isn't a lucky/unlucky draw of which scroll got held out.
+baseline: **0.5079 / 0.5051 / 0.5084** — within 0.0033 of each other, and within 0.0111 of
+the LOSO number itself (0.5162). Real convergent evidence the LOSO number isn't a
+lucky/unlucky draw of which scroll got held out.
 
 ### 5. Train the from-scratch baseline
 

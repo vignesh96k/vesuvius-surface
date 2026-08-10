@@ -22,9 +22,10 @@ to a real log line, not an estimate.
 ## Phase 1 — Validation protocol
 
 4. Decided LOSO (leave-one-scroll-out, scroll 26010 held out — 657 train / 129 val) as the primary
-   protocol, cross-checked with stratified 80/20 k-fold. Three independent stratified folds landed
-   within ~0.01 of each other (0.5162 / 0.5079 / 0.5051) — real convergent evidence the split isn't a
-   lucky/unlucky draw, not assumed.
+   protocol, cross-checked with stratified 80/20 k-fold. Three independent stratified folds
+   (0.5079 / 0.5051 / 0.5084) landed within 0.0033 of each other, and within 0.0111 of the LOSO
+   number itself (0.5162) — real convergent evidence the split isn't a lucky/unlucky draw, not
+   assumed.
 5. Discovered a contamination problem: **both** arunodhayan's checkpoint (3rd place) and the actual
    1st-place checkpoint (`scrollprize/surface_m7_nnunet`, public on HuggingFace, Apache-2.0 — a third
    public reference source) were trained on 100% of available data ("we abandoned the traditional K-Fold
