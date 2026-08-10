@@ -122,15 +122,27 @@ to a real log line, not an estimate.
     partition the original component via nearest-seed Voronoi tessellation, cut the partition boundary,
     accept only if the official metric improves on that volume (never a per-cut heuristic).
     `erosion_radius` calibrated from a real distance-transform measurement (median sheet half-thickness
-    ~1 voxel), not guessed. Full 129-case LOSO run (arunodhayan cascade-lastlayers + 1st-place pp
-    control line): 25/129 volumes had candidate cuts, 19/129 accepted by the per-volume score gate --
-    but the aggregate SCORE across all 129 cases is **unchanged to full float precision**
-    (0.6347071689500106 control vs. 0.6347071689500106 unmerge_accepted, delta +0.0000). Not a bug: the
-    accept gate only requires `delta >= 0.0` on a single volume, so accepted cuts can be individually
-    real but too small to move a 129-case mean at all. Honest read: net-neutral on this control line,
-    not a demonstrated win, despite a nonzero accept rate. The from-scratch-line (skeleton-recall 700ep)
-    version of this same run is still in progress -- see whether it lands differently before drawing a
-    final conclusion.
+    ~1 voxel), not guessed. Full 129-case LOSO run, both lines:
+
+    | line | candidate cuts | accepted | control score | unmerge_accepted score | delta |
+    |---|---:|---:|---:|---:|---:|
+    | B4 (arunodhayan cascade-lastlayers + 1st-place pp) | 25/129 | 19/129 | 0.7362712389124269 | 0.7362712389124269 | +0.0 (exact) |
+    | A4 (our own 700ep skeleton-recall + 1st-place pp) | 57/129 | 38/129 | 0.5682620632580213 | 0.5682707599558241 | +0.0000087 |
+
+    B4 is unchanged to full float precision. A4 has a real but negligible positive delta. Not a bug in
+    either case: the accept gate only requires `delta >= 0.0` on a single volume, so accepted cuts can
+    be individually real but too small to move a 129-case mean. Honest read: net-neutral on both lines,
+    not a demonstrated win, despite nonzero accept rates on both.
+
+    **These numbers were re-scored after fixing a real bug** in `evaluation/metric_adapter.py`:
+    `score_pair` was silently calling the metric package with its own default `voi_alpha=1.0` instead
+    of the `voi_alpha=0.3` every other reported number in this project uses (confirmed by scoring the
+    same real case both ways: 0.5204 vs. 0.6182, the latter matching the already-on-record number
+    exactly). Since `apply_unmerge` in `unmerge.py` calls `score_pair` directly for its own accept/reject
+    gate, this means every accept/reject decision the unmerge layer has made -- not just today's numbers
+    -- was gated against the wrong metric. The candidate/accept *counts* above are structural (same
+    regardless of which voxels get counted as connected) and unaffected; the aggregate scores are the
+    corrected, re-scored values. See git history on `metric_adapter.py` for the full account.
 
 ## Phase 6 — Real Kaggle submissions
 
