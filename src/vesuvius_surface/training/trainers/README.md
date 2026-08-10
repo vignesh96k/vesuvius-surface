@@ -19,9 +19,16 @@ back to the exact trainer that produced it.
 | `nnUNetTrainerSkeletonRecallAffinity_1epoch` | Smoke test for the combined trainer above (forward/backward/checkpoint sanity only) | not a real result |
 | `nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs` | Phase 4, item 14 — last-layers-only (0.07% of params trainable) fine-tune of arunodhayan's real cascade checkpoint. **The one genuinely positive fine-tuning result of the whole project.** | 0.7248 vs 0.7198 zero-shot (+0.0050), full 129-case LOSO |
 | `nnUNetTrainerSkeletonRecallCascadeLastLayers_1epoch` | Smoke test for the trainer above (verifies the frozen-backbone + cascade + skeleton-recall combination actually trains before committing to the real 10-epoch run) | not a real result |
+| `nnUNetTrainerSeeded` (base, vendored from `baselinerun/`) | Reproducibility fix: stock nnU-Net sets no RNG seed anywhere (verified from `nnUNetTrainer.__init__` and the `nnUNetv2_train` CLI arg list directly). Seeds torch/numpy/random via nnU-Net's own `nnUNet_extTrainer` external-trainer mechanism. Base class for every from-scratch baseline result in Phase 2, item 7. | — |
+| `nnUNetTrainerSeeded_ClDice_ScheduleFree` (vendored from `baselinerun/`) | Phase 3, item 11 — 100-epoch 5-way candidate comparison. Replicates arunodhayan's exact loss+optimizer recipe (DC+CE + 0.2·clDice, RAdamScheduleFree lr=1e-3, no LR schedule — verified from his public `train.py`, not guessed) on our own leakage-free 657-case LOSO split, isolating loss+optimizer from his other changes (boosted rotation aug deliberately excluded). | 0.5285 (lost to skeleton-recall, 0.5307) |
+| `nnUNetTrainerSeeded_ClDice_ScheduleFree_350epochs` | Prepared as the winner-extension trainer *if* clDice+ScheduleFree had won the 100-epoch comparison (350 not 700 epochs: ScheduleFree's constant-LR design converges faster, and clDice's ~69s/epoch overhead vs. ~35s/epoch stock means 350 epochs costs about the same wall-clock as 700 of a cheaper candidate) | **not run** — lost the 100-epoch comparison |
+| `STUNetTrainer` (base, vendored from `baselinerun/`) | STU-Net (TotalSegmentator-pretrained, architecturally distinct from nnU-Net's own CNN) fine-tuning family — chosen specifically because it's provably leak-free (never seen a Vesuvius volume), unlike fine-tuning arunodhayan's or m7's checkpoints. Contains a real upstream bug fix (wrong positional-arg order) documented in-file. | — |
+| `STUNetTrainer_base_ft_30epochs` | Phase 3, item 10 — 30-epoch fine-tune of STU-Net-B (58M params) | **negative**, 0.4629 vs. 0.5575 best_baseline (n=129 full LOSO); ruled out |
 
-For the *negative*-result trainers (STU-Net fine-tune, the full arunodhayan highpass+skeleton-recall
-+affinity fine-tune, Phase 3 items 10 and 12) see `nnUNetTrainerSeeded` and the arunodhayan cascade
-driver — those live under `training/finetune/` and `third_party/arunodhayan_source/` respectively
-(vendored from `baselinerun/` and `finetune/`), not in this directory, since they use a genuinely
-different training entrypoint (not nnU-Net's own `-tr` trainer-class mechanism for the STU-Net case).
+`nnUNetTrainerSeeded`/`STUNetTrainer`/their variants above were vendored from `baselinerun/`
+(a separate, previously-uncommitted project directory with its own from-scratch training
+pipeline — see `research_log.md` for how the two projects' work was merged). The arunodhayan
+cascade fine-tune driver (Phase 3, item 12 — the other negative full-fine-tune result) is a
+genuinely different training entrypoint, not an nnU-Net `-tr` trainer class at all — it lives
+under `training/finetune/` and `third_party/arunodhayan_source/` instead (vendored from
+`finetune/`).
