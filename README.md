@@ -117,6 +117,12 @@ Result: 0.5597 local LOSO, real submission 0.50962 public / 0.51693 private.
 
 ### 6. 100-epoch comparison — pick a loss/architecture winner
 
+The baseline's weak point was specifically TopoScore (0.2021, well below what the composite's
+0.30 weight on it implies it should be given the 0.5597 overall score — see docs/metric.md),
+not surface accuracy. That's why this comparison isn't a generic architecture search:
+skeleton-recall, clDice, and affinity are all topology/connectivity-aware losses aimed
+directly at that term.
+
 ```bash
 nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecall_100epochs    # winner: 0.5307
 nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSeeded_ClDice_ScheduleFree   # 0.5285
