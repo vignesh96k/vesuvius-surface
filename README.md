@@ -38,6 +38,7 @@ Two conda environments, deliberately kept separate (see `docs/reproducibility_no
 conda env create -f environment-train.yml
 conda activate vesuvius
 pip install -e .
+python -m ipykernel install --user --name vesuvius --display-name vesuvius  # notebooks/*.ipynb pin this kernel name
 
 # Official scorer (only needed to reproduce reported scores, not to train)
 conda env create -f environment-eval.yml
