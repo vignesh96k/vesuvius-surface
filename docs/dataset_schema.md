@@ -78,14 +78,10 @@ kaggle competitions download -c vesuvius-challenge-surface-detection -p data/
 
 Approximate size: **~27 GB**.
 
-### Local path (this workspace)
+### Local path
 
-```text
-C:\Users\vigne\Downloads\vesuvius-challenge-surface-detection
-```
-
-Set `data.root` in `configs/config.yaml` to your extract (default on the training host:
-`/mnt/workspace/code/datasets/vesuvius-challenge-surface-detection`).
+Set the `VESUVIUS_DATA_ROOT` environment variable to your extract — see `docs/data.md`. No
+machine-specific default path is assumed anywhere in this repo.
 
 ## Pipeline outputs (for later modeling)
 
