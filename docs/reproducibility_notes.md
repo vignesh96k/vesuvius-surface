@@ -42,8 +42,25 @@ and checkable as a result of that lesson, not because of excess caution for its 
   mechanism reused an existing one) and didn't survive a proper one: the real checkpoints
   (`nnUNet_results_ensembleA_ft/`, `nnUNet_results_cascade_ft/`, both under
   `Dataset102_VesuviusSurfaceHighpassOnly`) have `trainer_name=nnUNetTrainerSkeletonRecallAffinity`
-  embedded directly in their own metadata — real, checkable evidence, not inferred. See
-  `README.md` step 9 for the real commands.
+  embedded directly in their own metadata — real, checkable evidence, not inferred.
+  `README.md` step 9 condenses this negative result to one line; real commands:
+
+  ```bash
+  python scripts/data_prep/build_dataset102_highpass_only.py   # writes Dataset102 (raw space)
+  python scripts/data_prep/build_dataset102_fullres.py         # fills in its fullres preprocessed tree
+  # Dataset102's plans (architecture/spacing) are identical to Dataset100's -- copy rather than
+  # replan: cp $nnUNet_preprocessed/Dataset100_VesuviusSurface/nnUNetResEncUNetMPlans.json \
+  #            $nnUNet_preprocessed/Dataset102_VesuviusSurfaceHighpassOnly/
+
+  # Ensemble member (one of arunodhayan's two 3d_fullres models):
+  nnUNetv2_train 102 3d_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
+      -pretrained_weights checkpoints/ensembleA_checkpoint_best.pth
+
+  # Cascade (needs a previous-stage input directory first -- see
+  # scripts/inference/convert_previous_stage.py):
+  nnUNetv2_train 102 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
+      -pretrained_weights checkpoints/Cascade_fullres_checkpoint_best.pth
+  ```
 
 ## Known, real gaps — stated plainly, not silently worked around
 

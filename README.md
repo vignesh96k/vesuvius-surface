@@ -173,7 +173,9 @@ against the frozen final leaderboard, it would place **#395 of 1392 (top 28.4%)*
 
 Fine-tuning starts with STU-Net (TotalSegmentator-pretrained): provably never seen a Vesuvius
 volume, so fine-tuning it against our own split is a genuinely clean comparison — unlike
-arunodhayan's or m7's checkpoints.
+arunodhayan's or m7's checkpoints. All layers unfrozen (58M params, full fine-tune, just a
+lower initial LR — 1e-3 vs. the 1e-2 from-scratch default) — the later last-layers-only
+approach below only came after this and the full arunodhayan fine-tune both went negative.
 
 ```bash
 bash scripts/setup_stunet.sh --model base
@@ -184,32 +186,11 @@ nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans \
 
 Result: 0.4629 vs. 0.5575 best from-scratch baseline (full 129-case LOSO) — a clear negative.
 
-Next: a full (unfrozen) fine-tune of arunodhayan's checkpoint, adding a highpass input channel
-(`scripts/data_prep/highpass.py`, same transform as step 7) plus skeleton-recall + affinity
-losses (`nnUNetTrainerSkeletonRecallAffinity`):
-
-```bash
-python scripts/data_prep/build_dataset102_highpass_only.py   # writes Dataset102 (raw space)
-python scripts/data_prep/build_dataset102_fullres.py         # fills in its fullres preprocessed tree
-# Dataset102's plans (architecture/spacing) are identical to Dataset100's -- copy rather than
-# replan: cp $nnUNet_preprocessed/Dataset100_VesuviusSurface/nnUNetResEncUNetMPlans.json \
-#            $nnUNet_preprocessed/Dataset102_VesuviusSurfaceHighpassOnly/
-
-# Ensemble member (one of arunodhayan's two 3d_fullres models):
-nnUNetv2_train 102 3d_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
-    -pretrained_weights checkpoints/ensembleA_checkpoint_best.pth
-
-# Cascade (needs a previous-stage input directory first -- see
-# scripts/inference/convert_previous_stage.py, same tool used to build any cascade's
-# coarse-hint channel):
-nnUNetv2_train 102 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
-    -pretrained_weights checkpoints/Cascade_fullres_checkpoint_best.pth
-```
-
-Result: ensemble 0.7029 → 0.5172, cascade 0.7198 → 0.5208 — unambiguously negative. So the
-next attempt freezes almost everything instead: the same skeleton-recall recipe from step
-7/8, applied to arunodhayan's cascade checkpoint, training only the final decoder stage and
-deep-supervision heads (0.07% of parameters).
+A full (unfrozen) fine-tune of arunodhayan's checkpoint — highpass input channel + skeleton-
+recall + affinity losses — did not produce positive results (ensemble 0.7029 → 0.5172,
+cascade 0.7198 → 0.5208, unambiguously negative), so we chose to fine-tune only the last
+layers of the cascade model instead: the same skeleton-recall recipe from step 7/8, training
+just the final decoder stage and deep-supervision heads (0.07% of parameters).
 
 ```bash
 # arunodhayan/cascade-updated is a Kaggle Model, not a plain Dataset -- see
