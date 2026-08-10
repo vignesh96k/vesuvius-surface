@@ -8,14 +8,17 @@ history of every experiment, and `research_log.md` for the narrative decision lo
 ## Results
 
 Two parallel tracks, each escalated through the same four stages — baseline/zero-shot →
-add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty layer:
+add skeleton-recall → add 1st-place postprocessing → add a novelty layer on top. Track A adds
+a fifth stage: a second, independent novelty layer (fragment bridging) also tried on top of
+pp — not stacked with unmerge, each tested separately against the same A3 baseline:
 
 | # | Track A — our own from-scratch line | Local LOSO (129 held-out) | Real Kaggle |
 |---|---|---:|---:|
 | A1 | 1000 epochs, from-scratch | 0.5597 | 0.50962 public / 0.51693 private |
 | A2 | + skeleton-recall (700 epochs) | 0.5671 | 0.54454 public / 0.55773 private |
 | A3 | + 1st-place postprocessing | 0.5683 | 0.54063 public / 0.56231 private |
-| A4 | + unmerge novelty | 0.5683 (net-neutral) | — |
+| A4 | + unmerge novelty (on A3) | 0.5683 (net-neutral) | — |
+| A5 | + fragment bridging novelty (on A3) | 0.5691 (+0.0009) | — |
 
 | # | Track B — arunodhayan's checkpoint | Local LOSO (129 held-out) | Real Kaggle |
 |---|---|---:|---:|
@@ -27,7 +30,9 @@ add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
 cases), scored with the real leaderboard-equivalent metric. "Net-neutral" (A4/B4): the unmerge
 layer passes real per-volume accept gates on both lines (19/129 and 38/129 respectively), but
-the aggregate score across all 129 cases is unchanged to full float precision on both.
+the aggregate score across all 129 cases is unchanged to full float precision on both. A5's
+fragment-bridging layer (Track A only so far) is a real, non-negative gain by construction
+(32/129 accepted) — see step 12.
 
 ## Quickstart
 
@@ -256,6 +261,33 @@ but too small to move a 129-case mean. This corrects an earlier version of this 
 predates a fix to a `voi_alpha` default bug in `evaluation.metric_adapter.score_pair` (was
 silently using the metric package's own `1.0` instead of the `0.3` every other reported number
 here uses — see that module's docstring for the full account).
+
+### 12. Metric-guided fragment bridging (novelty, on top of pp — the other half of the merge/split gap)
+
+Unmerge (step 11) splits components wrongly fused together; nothing bridges components
+wrongly *split apart* — the exact failure step 6's failure-case analysis found ("our
+predicted sheet surfaces come out as visibly broken, discontinuous lines"). Method: pair
+each component's nearest surface point against every other component's (via `cKDTree`),
+accept a pair only if both sides' local surface orientation points back toward the other
+(rules out bridging unrelated nearby sheets — that's what unmerge's Voronoi cut targets
+instead), connect accepted pairs with a thin bridge, gate the whole volume the same way
+unmerge is gated. Grounded in real literature (vessel-reconnection endpoint-pairing
+techniques; a real top-10 solution in *this* competition independently used a heavier
+orientation-aware technique for the same purpose — see `docs/attribution.md`).
+
+```bash
+python scripts/run_postprocess.py --method bridge --workers 8 \
+    --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecall_700epochs__nnUNetResEncUNetMPlans__3d_lowres/fold_0/validation \
+    --output out/a5 --labels $VESUVIUS_DATA_ROOT/train_labels
+```
+
+Applied on top of the already-deployed, unconditional 1st-place pp output (not an
+oracle-gated intermediate — see `docs/decisions.md` decision 21 for a real methodology bug
+caught and fixed while validating this): **0.5683 → 0.5691 (+0.0009)**, full 129-case LOSO,
+32/129 accepted. Standalone (no pp): 0.5671 → 0.5682 (+0.0011), 40/129 accepted, mean
+accepted-case gain +0.0035 vs. mean rejected-case would-be loss -0.0083 — a real,
+well-behaved signal. Applied unconditionally (no gate) is a net negative either way; the
+gate is doing real work, not formality.
 
 ## Repo map
 
