@@ -7,18 +7,31 @@ history of every experiment, and `research_log.md` for the narrative decision lo
 
 ## Results
 
-| Model | Local LOSO (129 held-out) | Real Kaggle submission |
-|---|---:|---:|
-| From-scratch, 1000 epochs | 0.5597 | 0.50962 public / 0.51693 private |
-| From-scratch, 700 epochs + skeleton-recall (+1st-place pp) | 0.5671 (+pp: 0.5683) | 0.54063 public / 0.56231 private |
-| arunodhayan zero-shot (3rd place, unmodified) | 0.7198 | 0.58667 public / 0.62410 private |
-| arunodhayan + skeleton-recall last-layers fine-tune (+1st-place pp) | 0.7248 (+pp: 0.7363) | see `experiment_summary.md` |
-| Skeleton-recall pipeline validation (partial checkpoint) | — | 0.48812 public / 0.49964 private |
+Two parallel tracks, each escalated through the same four stages — baseline/zero-shot →
+add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty layer:
+
+| # | Track A — our own from-scratch line | Local LOSO (129 held-out) | Real Kaggle |
+|---|---|---:|---:|
+| A1 | 1000 epochs, from-scratch | 0.5597 | 0.50962 public / 0.51693 private |
+| A2 | + skeleton-recall (700 epochs) | 0.5671 | 0.54063 public / 0.56231 private |
+| A3 | + 1st-place postprocessing | 0.5683 | — |
+| A4 | + unmerge novelty | 0.5683 (net-neutral) | — |
+
+| # | Track B — arunodhayan's checkpoint | Local LOSO (129 held-out) | Real Kaggle |
+|---|---|---:|---:|
+| B1 | Zero-shot (3rd place, unmodified) | 0.7198 | 0.58667 public / 0.62410 private |
+| B2 | + skeleton-recall last-layers fine-tune | 0.7248 | — |
+| B3 | + 1st-place postprocessing | 0.7363 | pending (submitted, not yet scored) |
+| B4 | + unmerge novelty | 0.7363 (net-neutral) | — |
 
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
 cases), scored with the real leaderboard-equivalent metric — see `docs/reproducibility_notes.md`
-for why local and real-leaderboard numbers don't match 1:1. "+pp" = with the 1st-place
-postprocessing chain applied.
+for why local and real-leaderboard numbers don't match 1:1. "Net-neutral" (A4/B4): the unmerge
+layer passes real per-volume accept gates on both lines (19/129 and 38/129 respectively), but
+the aggregate score across all 129 cases is unchanged to full float precision on both — a real,
+checked result, not an approximation. Other real result, not part of either track's ladder:
+skeleton-recall pipeline validation on a partial checkpoint, 0.48812 public / 0.49964 private
+(confirms the submission pipeline itself works, not a final reported model).
 
 ## Quickstart
 
