@@ -43,7 +43,7 @@ and checkable as a result of that lesson, not because of excess caution for its 
   (`nnUNet_results_ensembleA_ft/`, `nnUNet_results_cascade_ft/`, both under
   `Dataset102_VesuviusSurfaceHighpassOnly`) have `trainer_name=nnUNetTrainerSkeletonRecallAffinity`
   embedded directly in their own metadata — real, checkable evidence, not inferred. See
-  `README.md` step 8 for the real commands.
+  `README.md` step 9 for the real commands.
 
 ## Known, real gaps — stated plainly, not silently worked around
 

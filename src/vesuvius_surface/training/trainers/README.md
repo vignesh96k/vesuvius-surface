@@ -30,5 +30,5 @@ back to the exact trainer that produced it.
 pipeline — see `research_log.md` for how the two projects' work was merged). The arunodhayan
 full cascade fine-tune (Phase 3, item 12 — the other negative full-fine-tune result) reuses
 `nnUNetTrainerSkeletonRecallAffinity` above via `-pretrained_weights`, not a separate trainer
-class — see `README.md` step 8 for the real commands and `docs/reproducibility_notes.md` for
+class — see `README.md` step 9 for the real commands and `docs/reproducibility_notes.md` for
 how that was confirmed (a real checkpoint's own embedded metadata, not assumed).

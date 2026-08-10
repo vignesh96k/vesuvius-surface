@@ -7,7 +7,7 @@ fine-tune run driven by configs/finetune_cascade.yaml. It is a plain fine-tune (
 architecture change), so it does NOT cover Phase 3, item 12's full arunodhayan fine-tune
 (highpass input + skeleton-recall + affinity loss) -- that one reuses
 `nnUNetTrainerSkeletonRecallAffinity` directly via nnU-Net's own `-tr` + `-pretrained_weights`
-flags, no wrapper script needed. See README.md step 8 for the real command.
+flags, no wrapper script needed. See README.md step 9 for the real command.
 """
 
 from __future__ import annotations

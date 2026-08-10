@@ -244,10 +244,10 @@ fine-tuning result** (0.7248 vs. 0.7198 zero-shot, +0.0050 on the full 129-case 
 
 **Note on reproducibility:** the full arunodhayan fine-tune is fully reproducible — it reuses
 `nnUNetTrainerSkeletonRecallAffinity`, an already-existing, tested trainer class, via
-`-pretrained_weights` on a highpass-augmented dataset. See `README.md` step 8 for the real
+`-pretrained_weights` on a highpass-augmented dataset. See `README.md` step 9 for the real
 commands.
 
-**Source:** `experiment_summary.md` Phase 3/4; `README.md` "Results" and step 8;
+**Source:** `experiment_summary.md` Phase 3/4; `README.md` "Results" and step 9;
 `src/vesuvius_surface/training/trainers/nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs.py`.
 
 ---
