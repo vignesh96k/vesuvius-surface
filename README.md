@@ -157,7 +157,25 @@ Submitted to Kaggle with 1st-place postprocessing applied (step 9 below): **0.54
 isn't an official rank, but checked against the frozen final leaderboard for reference: the
 private score would place **#395 of 1392 (top 28.4%)**.
 
-### 8. Apply the same finding to arunodhayan's checkpoint (last-layers fine-tune)
+### 8. Fine-tuning: STU-Net first, then arunodhayan's last layers
+
+Fine-tuning starts with STU-Net (TotalSegmentator-pretrained), chosen specifically because
+it has none of the leakage problem from step 4 — it's provably never seen a Vesuvius volume,
+so fine-tuning it against our own authored split is a genuinely clean comparison, unlike
+arunodhayan's or m7's checkpoints.
+
+```bash
+bash scripts/setup_stunet.sh --model base
+nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans \
+    -tr STUNetTrainer_base_ft_30epochs \
+    -pretrained_weights checkpoints/stunet_base.model
+```
+
+Result: 0.4629 vs. 0.5575 best from-scratch baseline (full 129-case LOSO) — a clear negative.
+
+That result is why the next attempt freezes almost everything instead of fine-tuning fully:
+applying the same skeleton-recall recipe from step 6/7 to arunodhayan's cascade checkpoint,
+but training only the final decoder stage and deep-supervision heads (0.07% of parameters).
 
 ```bash
 # arunodhayan/cascade-updated is a Kaggle Model, not a plain Dataset -- see
@@ -169,12 +187,7 @@ nnUNetv2_train 100 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans \
 ```
 
 Result: 0.7248 local LOSO vs. 0.7198 zero-shot (**+0.0050**) — the project's one genuinely
-positive fine-tuning result. This trainer freezes everything except the final decoder stage
-and deep-supervision heads (0.07% of parameters trainable) before applying the same
-skeleton-recall loss from step 6/7. That matters because full fine-tuning was tried first and
-regressed every single time (STU-Net, this same 5-way loss comparison retried as a cascade
-fine-tune, and a full unfrozen arunodhayan fine-tune) — freezing almost everything is what
-actually worked, not more training.
+positive fine-tuning result.
 
 ### 9. 1st-place postprocessing, both lines
 
