@@ -452,5 +452,73 @@ python scripts/run_postprocess.py \
 One command writes final masks and scores them. Pass ``--ablate`` for the
 cumulative stage table in the same run.
 
+## 15. Novelty: metric-guided unmerge
+
+The control chain above repairs holes *inside* a component (closing, height-map
+patch, hole plug, fill) but never severs a bridge fused *between* two
+components — it is merge-blind by construction. The ablation confirms it
+directly: `voi_merge` sits at 1.1230 (raw) through 1.1251 (fill) across every
+control stage on the 5-case holdout sample — untouched, while `surface_dice`
+and `topo_score` move. Scroll 35360 independently shows a real merge skew
+(§8: merge 1.28 vs split 1.05) — fused sheets specifically, not fragments.
+
+**Method** (`src/postprocess/unmerge.py`, separate module — not folded into
+`first_place.py`):
+
+1. Start from the control's output, one connected component at a time.
+2. Erode the component by a ball of radius `erosion_radius`. A thin neck
+   vanishes under erosion; the two thicker masses it joins survive as separate
+   seed blobs. If erosion leaves >=2 seeds each >= `min_seed_size` voxels, the
+   component is a *merge candidate*.
+3. Partition the *original* (uneroded) component by nearest surviving seed —
+   a Euclidean nearest-seed / Voronoi tessellation via
+   `distance_transform_edt(..., return_indices=True)`. This needs nothing
+   beyond scipy and is the simplest valid stand-in for a full watershed.
+4. Remove the `cut_width`-voxel boundary between differently-labeled
+   partitions. The partition boundary is a full separating surface by
+   construction, so removing it disconnects the two sheets.
+5. Drop pieces below `min_piece_size` (cut debris), same idea as
+   `remove_small_components`.
+
+**Accept/reject is per volume, not per cut.** Every candidate cut in a volume
+is applied at once, the volume is scored once with the *same*
+`evaluation.metric_adapter.score_pair` the harness uses (never reimplemented),
+and the cut version is kept only if `score` improves by at least
+`min_score_delta` (default 0.0 — any non-negative improvement). Scoring one
+volume already costs ~60-90s (Betti-matching dominates); per-cut scoring
+inside a volume was not affordable, so per-volume is the coarsest granularity
+that is still an honest reading of "accept a cut only if the metric improves
+on that volume."
+
+**Real calibration, not a guess.** The first version defaulted
+`erosion_radius=2` and found *zero* candidates across 5 real m7_holdout
+control masks. A distance-transform check explained why: even the largest
+healthy component's half-thickness maxes out around 2.0 voxels (median 1.0)
+— these are inherently thin sheets, not blobs, and radius-2 erosion removes
+one whole-cloth. `erosion_radius=1` is the largest radius that still leaves
+real sheet material as seeds; it immediately finds real candidates, including
+9 in a case from scroll 35360 — the exact scroll flagged above for merge
+skew.
+
+**How to run:**
+
+```bash
+python scripts/run_postprocess.py \
+  --predictions /mnt/workspace/code/subsets/m7_holdout/predictions \
+  --output /mnt/workspace/code/subsets/m7_holdout/pp_unmerge \
+  --labels /mnt/workspace/code/subsets/m7_holdout/labels \
+  --method unmerge
+```
+
+Writes `control/`, `unmerge_proposed/` (cut applied unconditionally, for
+inspection), and `unmerge_accepted/` (the gated output — this is the layer's
+actual result) under `--output`, plus a control-vs-accepted comparison table
+(ΔSCORE, ΔVOI_merge, per scroll) and `scores/unmerge_vs_control_summary.json`.
+
+**What to claim: Δ vs control only**, not an absolute leaderboard number —
+the holdout split provenance is unverified (§7) and n is small. See the raw
+smoke-test evidence and the 5-case CLI comparison this section is measured
+against for the honest current numbers before citing this anywhere.
+
 [1st]: https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su
 
