@@ -45,6 +45,7 @@ import json
 import logging
 import time
 from dataclasses import asdict, dataclass
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Optional
 
@@ -342,6 +343,40 @@ def _write_tif(path: Path, array: np.ndarray) -> None:
     tifffile.imwrite(str(path), array.astype(np.uint8))
 
 
+def _process_one_case(args: tuple) -> tuple[str, Optional[dict], Optional[str]]:
+    """Picklable worker body for the ``workers > 1`` path -- one volume's full unmerge
+    (propose -> write proposed -> score control/proposed -> accept-or-reject -> write
+    accepted), independent of every other volume. Returns
+    ``(case_id, result_dict_or_None, error_or_None)``, never raises, matching
+    evaluation.harness._score_one_case's shape."""
+    case_id, control_dir, labels_dir, output_dir, cfg, overwrite = args
+    from vesuvius_surface.data.io import load_volume
+
+    control_dir = Path(control_dir)
+    labels_dir = Path(labels_dir)
+    output_dir = Path(output_dir)
+
+    control_path = control_dir / f"{case_id}.tif"
+    label_path = labels_dir / f"{case_id}.tif"
+    if not control_path.exists() or not label_path.exists():
+        return case_id, None, "missing control or label"
+
+    control_mask = load_volume(control_path)
+    label = load_volume(label_path)
+
+    proposed, _infos = propose_cuts(control_mask, cfg)
+    proposed_out = output_dir / "unmerge_proposed" / f"{case_id}.tif"
+    if overwrite or not proposed_out.exists():
+        _write_tif(proposed_out, proposed)
+
+    final_mask, result = apply_unmerge(control_mask, label, cfg, case_id=case_id)
+    accepted_out = output_dir / "unmerge_accepted" / f"{case_id}.tif"
+    if overwrite or not accepted_out.exists():
+        _write_tif(accepted_out, final_mask)
+
+    return case_id, asdict(result), None
+
+
 def run_directory(
     control_dir: str | Path,
     labels_dir: str | Path,
@@ -351,6 +386,7 @@ def run_directory(
     limit: Optional[int] = None,
     overwrite: bool = False,
     resume: bool = True,
+    workers: int = 1,
 ) -> dict:
     """Run metric-guided unmerge over every control mask in ``control_dir``.
 
@@ -360,9 +396,14 @@ def run_directory(
     one JSON line per case to ``output_dir/unmerge_results.jsonl`` (resumable, same
     convention as ``evaluation.harness.evaluate_directory``) and writes a summary
     with per-scroll and overall deltas to ``output_dir/unmerge_summary.json``.
-    """
-    from vesuvius_surface.data.io import load_volume
 
+    ``workers`` > 1 parallelizes across volumes (each is independent -- its own
+    propose/score/write), via ``multiprocessing.Pool``. Same caller obligation as
+    ``evaluation.harness.evaluate_directory``: the OMP_NUM_THREADS-family env vars must
+    already be set to "1" before numpy is first imported in this process, not just before
+    calling this function -- see that function's docstring and
+    scripts/run_postprocess.py's top-of-file guard.
+    """
     control_dir = Path(control_dir)
     labels_dir = Path(labels_dir)
     output_dir = Path(output_dir)
@@ -397,37 +438,68 @@ def run_directory(
     pending = [c for c in case_ids if c not in done]
     logger.info("Unmerging %d case(s) (%d already done)", len(pending), len(done))
 
-    try:
-        from tqdm.auto import tqdm
+    if workers <= 1:
+        from vesuvius_surface.data.io import load_volume
 
-        iterator = tqdm(pending, desc="unmerge", unit="vol")
-    except ImportError:
-        iterator = pending
+        try:
+            from tqdm.auto import tqdm
 
-    with results_path.open("a", encoding="utf-8") as handle:
-        for case_id in iterator:
-            control_path = control_dir / f"{case_id}.tif"
-            label_path = labels_dir / f"{case_id}.tif"
-            if not control_path.exists() or not label_path.exists():
-                logger.warning("Missing control or label for %s, skipping", case_id)
-                continue
+            iterator = tqdm(pending, desc="unmerge", unit="vol")
+        except ImportError:
+            iterator = pending
 
-            control_mask = load_volume(control_path)
-            label = load_volume(label_path)
+        with results_path.open("a", encoding="utf-8") as handle:
+            for case_id in iterator:
+                control_path = control_dir / f"{case_id}.tif"
+                label_path = labels_dir / f"{case_id}.tif"
+                if not control_path.exists() or not label_path.exists():
+                    logger.warning("Missing control or label for %s, skipping", case_id)
+                    continue
 
-            proposed, _infos = propose_cuts(control_mask, cfg)
-            proposed_out = output_dir / "unmerge_proposed" / f"{case_id}.tif"
-            if overwrite or not proposed_out.exists():
-                _write_tif(proposed_out, proposed)
+                control_mask = load_volume(control_path)
+                label = load_volume(label_path)
 
-            final_mask, result = apply_unmerge(control_mask, label, cfg, case_id=case_id)
-            accepted_out = output_dir / "unmerge_accepted" / f"{case_id}.tif"
-            if overwrite or not accepted_out.exists():
-                _write_tif(accepted_out, final_mask)
+                proposed, _infos = propose_cuts(control_mask, cfg)
+                proposed_out = output_dir / "unmerge_proposed" / f"{case_id}.tif"
+                if overwrite or not proposed_out.exists():
+                    _write_tif(proposed_out, proposed)
 
-            handle.write(json.dumps(asdict(result)) + "\n")
-            handle.flush()
-            results.append(result)
+                final_mask, result = apply_unmerge(control_mask, label, cfg, case_id=case_id)
+                accepted_out = output_dir / "unmerge_accepted" / f"{case_id}.tif"
+                if overwrite or not accepted_out.exists():
+                    _write_tif(accepted_out, final_mask)
+
+                handle.write(json.dumps(asdict(result)) + "\n")
+                handle.flush()
+                results.append(result)
+    else:
+        # workers > 1: same per-case logic, moved into _process_one_case so it can run in
+        # a separate process; this process only writes the (already-serializable) results.
+        units = [
+            (case_id, str(control_dir), str(labels_dir), str(output_dir), cfg, overwrite)
+            for case_id in pending
+        ]
+        progress_bar = None
+        try:
+            from tqdm.auto import tqdm
+
+            progress_bar = tqdm(total=len(units), desc="unmerge", unit="vol")
+        except ImportError:
+            pass
+
+        with results_path.open("a", encoding="utf-8") as handle, Pool(workers) as pool:
+            for case_id, payload, error in pool.imap_unordered(_process_one_case, units):
+                if progress_bar is not None:
+                    progress_bar.update(1)
+                if error is not None:
+                    logger.warning("%s for %s, skipping", error, case_id)
+                    continue
+                result = VolumeUnmergeResult(**payload)
+                handle.write(json.dumps(payload) + "\n")
+                handle.flush()
+                results.append(result)
+        if progress_bar is not None:
+            progress_bar.close()
 
     n_cut_volumes = sum(1 for r in results if r.n_cut > 0)
     n_accepted = sum(1 for r in results if r.accepted)

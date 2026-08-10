@@ -20,8 +20,19 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
+
+# Must happen before numpy is imported anywhere in this process (including transitively,
+# via the vesuvius_surface imports below) -- a multiprocessing.Pool worker inherits whatever
+# thread pool numpy's BLAS backend already initialized in the parent at fork time, so setting
+# these later (e.g. inside harness.py/unmerge.py) would be too late. This is the exact bug
+# documented in packages/vesuvius_evaluation/.../official_score.py (workers found running 22
+# threads each on a 22-core box) and already worked around the same way in
+# scripts/evaluation/score_model.py -- see both for the full story.
+for _var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -115,6 +126,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--no-resume", action="store_true")
+    p.add_argument(
+        "--workers", type=int, default=1,
+        help="Parallelize across volumes (unmerge step and/or scoring) via "
+        "multiprocessing.Pool -- see evaluation.harness.evaluate_directory and "
+        "postprocess.unmerge.run_directory docstrings. 1 (default) keeps the original "
+        "sequential behavior. 8 is the proven-safe ceiling used elsewhere in this repo "
+        "(scripts/evaluation/score_model.py) on a 117GB box for this metric's memory use.",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     return p.parse_args()
 
@@ -137,6 +156,7 @@ def score_dir(
     scroll_map: dict[str, str],
     limit: int | None,
     resume: bool,
+    workers: int = 1,
 ) -> dict[str, dict[str, float]]:
     case_ids = None
     if limit is not None:
@@ -148,6 +168,7 @@ def score_dir(
         case_ids=case_ids,
         scroll_map=scroll_map,
         resume=resume,
+        workers=workers,
     )
     return aggregate_by_scroll(scores)
 
@@ -267,6 +288,7 @@ def run_unmerge_method(args: argparse.Namespace) -> int:
         config=unmerge_cfg,
         limit=args.limit,
         overwrite=args.overwrite,
+        workers=args.workers,
     )
     print(
         f"[unmerge] {unmerge_summary['n_volumes']} volume(s), "
@@ -282,10 +304,12 @@ def run_unmerge_method(args: argparse.Namespace) -> int:
         control_summary = score_dir(
             control_dir, args.labels, scores_root / "control.jsonl",
             scroll_map=scroll_map, limit=args.limit, resume=not args.no_resume,
+            workers=args.workers,
         )
         accepted_summary = score_dir(
             args.output / "unmerge_accepted", args.labels, scores_root / "unmerge_accepted.jsonl",
             scroll_map=scroll_map, limit=args.limit, resume=not args.no_resume,
+            workers=args.workers,
         )
     except MetricUnavailable as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -376,6 +400,7 @@ def main() -> int:
                     scroll_map=scroll_map,
                     limit=args.limit,
                     resume=not args.no_resume,
+                    workers=args.workers,
                 )
                 by_stage[stage] = summary
                 print_scroll_table(summary, f"stage={stage}")
@@ -398,6 +423,7 @@ def main() -> int:
                 scroll_map=scroll_map,
                 limit=args.limit,
                 resume=not args.no_resume,
+                workers=args.workers,
             )
             print_scroll_table(summary, f"stage={args.through_stage}")
             print(f"\nFinal masks : {args.output}")
