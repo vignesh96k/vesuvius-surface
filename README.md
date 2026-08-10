@@ -78,9 +78,9 @@ jupyter nbconvert --to notebook --execute notebooks/01_dataset_overview.ipynb
 python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
 ```
 
-Leave-one-scroll-out, not a random/case-level split, backed by real literature on
-same-scan leakage in medical imaging (Yagis et al. 2021 *Sci Rep*; Varoquaux & Cheplygina
-2022 *npj Digital Medicine*) — same-scroll cases are likely spatially correlated.
+Leave-one-scroll-out, backed by real literature on same-scan leakage in medical imaging
+(Yagis et al. 2021 *Sci Rep*; Varoquaux & Cheplygina 2022 *npj Digital Medicine*) —
+same-scroll cases are likely spatially correlated.
 
 ### 4. Auditing the split
 
