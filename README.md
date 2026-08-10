@@ -10,7 +10,7 @@ history of every experiment, and `research_log.md` for the narrative decision lo
 | Model | Local LOSO (129 held-out) | Real Kaggle submission |
 |---|---:|---:|
 | From-scratch, 1000 epochs | 0.5597 | 0.50962 public / 0.51693 private |
-| From-scratch, 700 epochs + skeleton-recall (+1st-place pp) | 0.5671 (+pp: 0.5683) | pending — see `experiment_summary.md` |
+| From-scratch, 700 epochs + skeleton-recall (+1st-place pp) | 0.5671 (+pp: 0.5683) | 0.54063 public / 0.56231 private |
 | arunodhayan zero-shot (3rd place, unmodified) | 0.7198 | 0.58667 public / 0.62410 private |
 | arunodhayan + skeleton-recall last-layers fine-tune (+1st-place pp) | 0.7248 (+pp: 0.7363) | see `experiment_summary.md` |
 | Skeleton-recall pipeline validation (partial checkpoint) | — | 0.48812 public / 0.49964 private |
@@ -151,6 +151,11 @@ nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkelet
 Result: 0.5671 local LOSO (vs. 0.5597 no-skeleton-recall baseline at the same scale) — the
 clearest direct evidence in this project that skeleton-recall's loss term does what it's
 designed to do (toposcore 0.2021 → 0.3028, +50% relative).
+
+Submitted to Kaggle with 1st-place postprocessing applied (step 9 below): **0.54063 public /
+0.56231 private**. The competition's real deadline (2026-02-27) has long passed, so this
+isn't an official rank, but checked against the frozen final leaderboard for reference: the
+private score would place **#395 of 1392 (top 28.4%)**.
 
 ### 8. Apply the same finding to arunodhayan's checkpoint (last-layers fine-tune)
 
