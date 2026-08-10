@@ -31,8 +31,7 @@ the aggregate score across all 129 cases is unchanged to full float precision on
 
 ## Quickstart
 
-Two conda environments, deliberately kept separate (see `docs/reproducibility_notes.md` for
-why — a real numpy/scipy ABI conflict, not a style preference):
+Two conda environments, deliberately kept separate (see `docs/reproducibility_notes.md` for a numpy/scipy conflict):
 
 ```bash
 # Training / inference / postprocessing
