@@ -14,7 +14,7 @@ add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty
 |---|---|---:|---:|
 | A1 | 1000 epochs, from-scratch | 0.5597 | 0.50962 public / 0.51693 private |
 | A2 | + skeleton-recall (700 epochs) | 0.5671 | 0.54063 public / 0.56231 private |
-| A3 | + 1st-place postprocessing | 0.5683 | — |
+| A3 | + 1st-place postprocessing | 0.5683 | 0.54063 public / 0.56231 private |
 | A4 | + unmerge novelty | 0.5683 (net-neutral) | — |
 
 | # | Track B — arunodhayan's checkpoint | Local LOSO (129 held-out) | Real Kaggle |
