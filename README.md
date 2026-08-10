@@ -13,7 +13,7 @@ add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty
 | # | Track A — our own from-scratch line | Local LOSO (129 held-out) | Real Kaggle |
 |---|---|---:|---:|
 | A1 | 1000 epochs, from-scratch | 0.5597 | 0.50962 public / 0.51693 private |
-| A2 | + skeleton-recall (700 epochs) | 0.5671 | — |
+| A2 | + skeleton-recall (700 epochs) | 0.5671 | 0.54454 public / 0.55773 private |
 | A3 | + 1st-place postprocessing | 0.5683 | 0.54063 public / 0.56231 private |
 | A4 | + unmerge novelty | 0.5683 (net-neutral) | — |
 
@@ -226,6 +226,10 @@ python scripts/run_postprocess.py --method first_place --workers 8 \
 ```
 
 Results: our line 0.5671 → 0.5683 (+0.0012); arunodhayan line 0.7248 → 0.7363 (+0.0115).
+
+Real Kaggle, our line (A2 → A3): public 0.54454 → 0.54063 (-0.0039), private 0.55773 →
+0.56231 (+0.0046) — pp's small local LOSO gain doesn't hold uniformly on the real
+leaderboard split.
 
 ### 11. Metric-guided unmerge (novelty), both lines
 
