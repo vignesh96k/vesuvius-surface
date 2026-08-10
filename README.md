@@ -2,49 +2,23 @@
 
 3D segmentation of papyrus sheet surfaces in micro-CT scans of carbonized, rolled scrolls
 (the [Vesuvius Challenge Surface Detection](https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection)
-Kaggle competition), nnU-Net-based. This repo is a Senior ML Engineer take-home assignment
-deliverable — see `experiment_summary.md` for the full, numbered history of every experiment,
-and `research_log.md` for the narrative decision log.
+Kaggle competition), nnU-Net-based. See `experiment_summary.md` for the full, numbered
+history of every experiment, and `research_log.md` for the narrative decision log.
 
 ## Results
 
 | Model | Local LOSO (129 held-out) | Real Kaggle submission |
 |---|---:|---:|
 | From-scratch, 1000 epochs | 0.5597 | 0.50962 public / 0.51693 private |
-| From-scratch, 700 epochs + skeleton-recall | 0.5671 (+pp: 0.5683) | pending — see `experiment_summary.md` |
+| From-scratch, 700 epochs + skeleton-recall (+1st-place pp) | 0.5671 (+pp: 0.5683) | pending — see `experiment_summary.md` |
 | arunodhayan zero-shot (3rd place, unmodified) | 0.7198 | 0.58667 public / 0.62410 private |
-| arunodhayan + last-layers fine-tune | 0.7248 (+pp: 0.7363) | not yet submitted |
+| arunodhayan + skeleton-recall last-layers fine-tune (+1st-place pp) | 0.7248 (+pp: 0.7363) | see `experiment_summary.md` |
 | Skeleton-recall pipeline validation (partial checkpoint) | — | 0.48812 public / 0.49964 private |
 
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
 cases), scored with the real leaderboard-equivalent metric — see `docs/reproducibility_notes.md`
 for why local and real-leaderboard numbers don't match 1:1. "+pp" = with the 1st-place
-postprocessing chain applied. Full numbered history, including 3 negative full-fine-tune
-results that came before the positive one above, in `experiment_summary.md`.
-
-**The headline finding isn't the highest number in that table.** Full fine-tuning on top of a
-strong pretrained checkpoint regressed every single time it was tried (STU-Net, a 5-way
-loss/architecture comparison, and the full arunodhayan fine-tune — see `experiment_summary.md`
-Phase 3). Freezing everything except the final decoder stage and deep-supervision heads (0.07%
-of parameters trainable) and fine-tuning *only that* is what actually worked. That pattern,
-plus a genuinely novel post-processing layer (below), are this project's real contributions —
-see `docs/attribution.md` for exactly what's original here versus adapted from public sources.
-
-## Repo map
-
-```
-src/vesuvius_surface/    training / data / eda / postprocess / evaluation code (pip install -e .)
-packages/vesuvius_evaluation/   the official scorer, its own installable package + own conda env
-third_party/              arunodhayan's real fine-tuning driver, vendored verbatim, not ours
-scripts/                  CLI entrypoints: data prep, training, inference, evaluation, downloads
-notebooks/                EDA, failure-case analysis, real Kaggle submission notebooks
-tests/                    unit/ (CI, no GPU/data needed) and functional/ (manual, needs both)
-docs/                     attribution, reproducibility gaps, checkpoints, dataset schema, metric
-configs/                  nnU-Net plan overrides, fine-tune config
-```
-
-`experiment_summary.md` and `research_log.md` are the two narrative documents — start there for
-the full story; this README covers setup and reproduction mechanics.
+postprocessing chain applied.
 
 ## Quickstart
 
@@ -64,14 +38,6 @@ bash packages/vesuvius_evaluation/scripts/install_topometrics.sh
 pip install -e packages/vesuvius_evaluation --no-deps
 ```
 
-Get the data and (optionally) a checkpoint:
-
-```bash
-export VESUVIUS_DATA_ROOT=/path/to/data
-bash scripts/download_data.sh                                    # see docs/data.md
-bash scripts/download_weights.sh <slug> checkpoints/<name>        # see docs/checkpoints.md
-```
-
 Smoke test (no GPU/data needed):
 
 ```bash
@@ -80,42 +46,210 @@ pip install -e ".[dev]"
 pytest tests/unit
 ```
 
-## Reproducing the experiments
+## The story, step by step
 
-Each phase below maps to `experiment_summary.md`'s numbered items. Reproducibility level is
-stated honestly per item — "exact" means re-running produces the same class of result; "gap"
-means a real, documented limitation exists (see `docs/reproducibility_notes.md` for the full
-list, not summarized further here).
+This is the actual order the project happened in, and every step below has a real command
+attached — this repo doesn't ask you to take any result on faith. One exception is called
+out explicitly at the end of step 8: the project's one negative full-fine-tune result whose
+training code no longer exists anywhere (see `docs/reproducibility_notes.md` item 1 for why)
+is deliberately **not** included here with a command, since presenting a command for code
+that doesn't run would be worse than not listing it.
 
-| Phase | What | Entry point | Reproducibility |
-|---|---|---|---|
-| 0 | EDA, metric discovery, test-set composition probe | `notebooks/01_dataset_overview.ipynb`, `docs/metric.md` | exact |
-| 1 | Validation protocol (LOSO + contamination discovery) | `scripts/make_scroll_split.py`, `scripts/verify_split.py` | exact |
-| 2 | Three zero-shot baselines (ours, arunodhayan's, m7's) | `scripts/nnunet_train_baseline.sh`; arunodhayan/m7 are downloaded checkpoints, see `docs/checkpoints.md` | exact for ours; zero-shot inference only for the other two |
-| 3 | Full fine-tune attempts (all negative) | `src/vesuvius_surface/training/trainers/` (STU-Net, 5-way comparison); `third_party/arunodhayan_source/train.py` (arunodhayan full fine-tune) | exact for trainer-class results; **gap** for the arunodhayan driver — see `docs/reproducibility_notes.md` item 1 |
-| 4 | The last-layers pivot (the one positive result) | `nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs`, `nnUNetTrainerSkeletonRecall_700epochs` | exact (seeded, not bit-exact-deterministic) |
-| 5 | Postprocessing: 1st-place chain + unmerge novelty | `scripts/run_postprocess.py --method {first_place,unmerge}` | exact |
-| 6 | Real Kaggle submissions | `notebooks/submissions/` | the notebooks are exact; the Kaggle-side scoring run itself is obviously not locally reproducible |
+### 1. Get the data
 
-Scoring any of the above against ground truth:
+```bash
+export VESUVIUS_DATA_ROOT=/path/to/data
+bash scripts/download_data.sh    # see docs/data.md
+```
+
+### 2. EDA
+
+```bash
+jupyter nbconvert --to notebook --execute notebooks/01_dataset_overview.ipynb
+```
+
+786 usable volumes across 6 scrolls with wildly uneven sizes (scroll 34117 has 376 volumes,
+53997 has 13), class balance 37% background / 4.9% surface / 58% ignore, median sheet
+thickness 2 voxels (matters for every postprocessing/novelty parameter downstream). Also
+where the official metric (`0.30×TopoScore + 0.35×SurfaceDice@2vox + 0.35×VOI`, **not**
+Dice-like) and the real hidden test-set composition (71% "familiar scroll", 29% "genuinely
+novel scroll", from the competition's own discussion forum) were established — see
+`docs/metric.md`.
+
+### 3. Build the LOSO validation split
+
+```bash
+python scripts/make_scroll_split.py --mode holdout-scroll --val-scroll 26010
+```
+
+Holds out scroll 26010 (129 volumes) entirely — never seen during training. This is what
+makes local scores a genuine generalization estimate rather than "another region of a
+familiar scroll."
+
+### 4. Validate the split — and why arunodhayan/m7 can't be used for experimentation
+
+```bash
+python scripts/verify_split.py
+```
+
+This is the step that mattered most for everything after it: checking whether the public
+`arunodhayan` (3rd place) and `scrollprize/surface_m7_nnunet` (1st place) checkpoints have a
+real, usable held-out fold. They don't — both teams' own writeups state they trained on
+100% of the data ("we abandoned the traditional K-Fold cross-validation... trained directly
+on the entire dataset"), and m7's checkpoint metadata confirms `fold='all'` directly rather
+than the `fold_0` its filename implies. **Consequence: no local score against either
+checkpoint is a clean generalization estimate** — which is exactly why step 5 trains a
+from-scratch baseline against a split we authored ourselves, rather than trusting either
+public checkpoint's own reported numbers.
+
+### 5. Train the from-scratch baseline
+
+```bash
+export nnUNet_raw=... nnUNet_preprocessed=... nnUNet_results=...
+NNUNET_NUM_EPOCHS=100 nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSeeded_100epochs
+```
+
+Result: 0.5162 local LOSO, real submission 0.46426 public / 0.46559 private. `nnUNetTrainerSeeded`
+exists specifically because stock nnU-Net sets no RNG seed anywhere — confirmed by reading
+`nnUNetTrainer.__init__` and the `nnUNetv2_train` CLI directly, not assumed.
+
+Extended to 1000 epochs (same trainer, different budget):
+
+```bash
+nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSeeded  # NNUNET_NUM_EPOCHS defaults to 1000
+```
+
+Result: 0.5597 local LOSO, real submission 0.50962 public / 0.51693 private.
+
+### 6. 100-epoch comparison — pick a loss/architecture winner
+
+```bash
+nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecall_100epochs    # winner: 0.5307
+nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSeeded_ClDice_ScheduleFree   # 0.5285
+nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerAffinity_100epochs           # 0.5226
+```
+
+Skeleton-recall (Kirchhoff et al., ECCV 2024, ported as `nnUNetTrainerSkeletonRecall`) won.
+Two other candidates from the original 5-way comparison (highpass-only, laplacian) are
+recorded as historical numbers in `experiment_summary.md` Phase 3 item 11 but have no
+surviving reproducible trainer code, so — same principle as step 8's note below — they're
+left out of this list rather than given a command that wouldn't actually run.
+
+### 7. Extend the winner: skeleton-recall to 700 epochs (our own line)
+
+```bash
+nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecall_700epochs
+```
+
+Result: 0.5671 local LOSO (vs. 0.5597 no-skeleton-recall baseline at the same scale) — the
+clearest direct evidence in this project that skeleton-recall's loss term does what it's
+designed to do (toposcore 0.2021 → 0.3028, +50% relative).
+
+### 8. Apply the same finding to arunodhayan's checkpoint (last-layers fine-tune)
+
+```bash
+# arunodhayan/cascade-updated is a Kaggle Model, not a plain Dataset -- see
+# docs/checkpoints.md for the exact download step; download_weights.sh only wraps
+# `kaggle datasets download` and doesn't apply here.
+nnUNetv2_train 100 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans \
+    -tr nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs \
+    -pretrained_weights checkpoints/Cascade_fullres_checkpoint_best.pth
+```
+
+Result: 0.7248 local LOSO vs. 0.7198 zero-shot (**+0.0050**) — the project's one genuinely
+positive fine-tuning result. This trainer freezes everything except the final decoder stage
+and deep-supervision heads (0.07% of parameters trainable) before applying the same
+skeleton-recall loss from step 6/7. That matters because full fine-tuning was tried first and
+regressed every single time (STU-Net, this same 5-way loss comparison retried as a cascade
+fine-tune, and a full unfrozen arunodhayan fine-tune) — freezing almost everything is what
+actually worked, not more training.
+
+**What's deliberately not here:** the full (unfrozen) arunodhayan fine-tune that was tried
+*before* this frozen version — real, logged, cross-validated negative numbers exist for it
+in `experiment_summary.md` Phase 3 item 12, but its training code (a hand-adapted variant
+combining highpass input + skeleton-recall + affinity loss) no longer exists anywhere in this
+repo, `third_party/`, or the working directory it came from. Rather than give a command that
+wouldn't run, or reconstruct one and risk repeating this project's own `fold='all'` lesson
+(presenting a plausible reconstruction as evidence), it's cited as a real historical result
+with no reproduce command — see `docs/reproducibility_notes.md` item 1 for the full account.
+
+### 9. 1st-place postprocessing, both lines
+
+A *different* team's technique (they placed 1st, not 3rd — see `docs/attribution.md`),
+reimplemented from their writeup: remove small components → per-sheet closing → height-map
+gap patching → hole plugging → global fill_holes.
 
 ```bash
 conda activate vesuvius_eval
-python scripts/evaluation/score_model.py --gt-dir $VESUVIUS_DATA_ROOT/train_labels \
-    --pred-dir my_model=path/to/predictions \
-    --splits-file $VESUVIUS_DATA_ROOT/../preprocessed/Dataset100_VesuviusSurface/splits_final.json --fold 0
+python scripts/run_postprocess.py --method first_place --workers 8 \
+    --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecall_700epochs__nnUNetResEncUNetMPlans__3d_lowres/fold_0/validation \
+    --output out/a3 --labels $VESUVIUS_DATA_ROOT/train_labels
+
+python scripts/run_postprocess.py --method first_place --workers 8 \
+    --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs__nnUNetResEncUNetMPlans__3d_cascade_fullres/fold_0/validation \
+    --output out/b3 --labels $VESUVIUS_DATA_ROOT/train_labels
 ```
+
+Results: our line 0.5671 → 0.5683 (+0.0012); arunodhayan line 0.7248 → 0.7363 (+0.0115).
+
+### 10. Metric-guided unmerge (novelty), both lines
+
+This project's own contribution, not from any public source (see `docs/attribution.md`).
+Motivated by a direct ablation finding: `voi_merge` sits essentially flat across every stage
+of the 1st-place chain — it repairs holes *inside* a component but is merge-blind by
+construction, never severing a bridge fused *between* two components. Erodes each component,
+treats surviving multi-seed splits as merge candidates, partitions via nearest-seed Voronoi
+tessellation, cuts the boundary, and accepts the cut only if the official metric improves on
+that volume.
+
+```bash
+python scripts/run_postprocess.py --method unmerge --workers 8 \
+    --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecall_700epochs__nnUNetResEncUNetMPlans__3d_lowres/fold_0/validation \
+    --output out/a4 --labels $VESUVIUS_DATA_ROOT/train_labels
+
+python scripts/run_postprocess.py --method unmerge --workers 8 \
+    --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs__nnUNetResEncUNetMPlans__3d_cascade_fullres/fold_0/validation \
+    --output out/b4 --labels $VESUVIUS_DATA_ROOT/train_labels
+```
+
+Candidate/accept counts (structural, unaffected by the note below): arunodhayan line —
+25/129 volumes had candidate cuts, 19/129 accepted; our own line — 57/129 had candidate
+cuts, 38/129 accepted. **Aggregate score numbers are being recomputed as of this writing**:
+a real bug was just found and fixed in the metric wrapper this command's scoring step goes
+through (`evaluation.metric_adapter.score_pair` was silently using the metric package's own
+`voi_alpha=1.0` instead of the `voi_alpha=0.3` every other reported number in this project
+uses — see that module's docstring and the git history on it for the full account). The
+aggregate score previously reported here for the arunodhayan line was computed before that
+fix and is not being repeated here since it's now known to be wrong; see
+`experiment_summary.md` Phase 5 item 17 for the corrected numbers once the re-score (on the
+already-written predictions, no retraining needed) completes.
+
+## Repo map
+
+```
+src/vesuvius_surface/    training / data / eda / postprocess / evaluation code (pip install -e .)
+packages/vesuvius_evaluation/   the official scorer, its own installable package + own conda env
+third_party/              arunodhayan's real zero-shot training driver, vendored verbatim, not ours
+scripts/                  CLI entrypoints: data prep, training, inference, evaluation, downloads
+notebooks/                EDA, failure-case analysis, real Kaggle submission notebooks
+tests/                    unit/ (CI, no GPU/data needed) and functional/ (manual, needs both)
+docs/                     attribution, reproducibility gaps, checkpoints, dataset schema, metric
+configs/                  nnU-Net plan overrides, fine-tune config
+```
+
+`experiment_summary.md` and `research_log.md` are the two narrative documents — start there for
+the full story; this README covers setup and reproduction mechanics.
 
 ## Known limitations
 
-Full list with detail in `docs/reproducibility_notes.md`. Headline items: the arunodhayan
-full-fine-tune result isn't reproducible from a clean script (the real driver was hardcoded,
-vendored verbatim rather than presented as something it isn't); no ensembling/TTA-combination
-script exists to reproduce how the real A/B ensemble predictions were combined; local LOSO
-scores hold out an *entire* scroll, so they validate the harder ~29% "genuinely novel scroll"
-portion of real grading (discovered via the competition's own discussion forum, not locally
-simulable otherwise) — the easier ~71% "novel case, familiar scroll" majority isn't directly
-tested by LOSO at all, since by construction its held-out scroll has zero presence in training.
+Full list with detail in `docs/reproducibility_notes.md`. Headline items: the full
+(unfrozen) arunodhayan fine-tune's training code no longer exists (see step 8 above); no
+ensembling/TTA-combination script exists to reproduce how the real A/B ensemble predictions
+were combined; local LOSO scores hold out an *entire* scroll, so they validate the harder
+~29% "genuinely novel scroll" portion of real grading (discovered via the competition's own
+discussion forum, not locally simulable otherwise) — the easier ~71% "novel case, familiar
+scroll" majority isn't directly tested by LOSO at all, since by construction its held-out
+scroll has zero presence in training.
 
 ## Packaging notes
 
@@ -130,12 +264,13 @@ flattened into the main package.
 ## Testing & CI
 
 `tests/unit/` — pure-function logic (the unmerge novelty layer's cut-proposal math, previous-
-stage conversion, LOSO-split leakage checks, the seeding utility) — runs in CI, no GPU or
-dataset needed. `tests/functional/` — needs real data/checkpoints (`VESUVIUS_DATA_ROOT`,
-`VESUVIUS_TEST_CHECKPOINT_DIR`), documented as manual-only, not run in CI. Real training,
-real leaderboard-equivalent scoring, and real Kaggle submission runs are inherently
-GPU/hours/real-account-scale and stay manual — `docs/reproducibility_notes.md` says exactly
-which reported numbers came from which of these three tiers.
+stage conversion, LOSO-split leakage checks, the seeding utility, parallel-vs-sequential
+scoring dispatch) — runs in CI, no GPU or dataset needed. `tests/functional/` — needs real
+data/checkpoints (`VESUVIUS_DATA_ROOT`, `VESUVIUS_TEST_CHECKPOINT_DIR`), documented as
+manual-only, not run in CI. Real training, real leaderboard-equivalent scoring, and real
+Kaggle submission runs are inherently GPU/hours/real-account-scale and stay manual —
+`docs/reproducibility_notes.md` says exactly which reported numbers came from which of these
+three tiers.
 
 ## Sources & attribution
 
