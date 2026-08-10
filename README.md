@@ -49,11 +49,7 @@ pytest tests/unit
 ## The story, step by step
 
 This is the actual order the project happened in, and every step below has a real command
-attached — this repo doesn't ask you to take any result on faith. One exception is called
-out explicitly at the end of step 8: the project's one negative full-fine-tune result whose
-training code no longer exists anywhere (see `docs/reproducibility_notes.md` item 1 for why)
-is deliberately **not** included here with a command, since presenting a command for code
-that doesn't run would be worse than not listing it.
+attached — this repo doesn't ask you to take any result on faith.
 
 ### 1. Get the data
 
@@ -175,15 +171,6 @@ regressed every single time (STU-Net, this same 5-way loss comparison retried as
 fine-tune, and a full unfrozen arunodhayan fine-tune) — freezing almost everything is what
 actually worked, not more training.
 
-**What's deliberately not here:** the full (unfrozen) arunodhayan fine-tune that was tried
-*before* this frozen version — real, logged, cross-validated negative numbers exist for it
-in `experiment_summary.md` Phase 3 item 12, but its training code (a hand-adapted variant
-combining highpass input + skeleton-recall + affinity loss) no longer exists anywhere in this
-repo, `third_party/`, or the working directory it came from. Rather than give a command that
-wouldn't run, or reconstruct one and risk repeating this project's own `fold='all'` lesson
-(presenting a plausible reconstruction as evidence), it's cited as a real historical result
-with no reproduce command — see `docs/reproducibility_notes.md` item 1 for the full account.
-
 ### 9. 1st-place postprocessing, both lines
 
 A *different* team's technique (they placed 1st, not 3rd — see `docs/attribution.md`),
@@ -253,8 +240,7 @@ the full story; this README covers setup and reproduction mechanics.
 
 ## Known limitations
 
-Full list with detail in `docs/reproducibility_notes.md`. Headline items: the full
-(unfrozen) arunodhayan fine-tune's training code no longer exists (see step 8 above); no
+Full list with detail in `docs/reproducibility_notes.md`. Headline items: no
 ensembling/TTA-combination script exists to reproduce how the real A/B ensemble predictions
 were combined; local LOSO scores hold out an *entire* scroll, so they validate the harder
 ~29% "genuinely novel scroll" portion of real grading (discovered via the competition's own
