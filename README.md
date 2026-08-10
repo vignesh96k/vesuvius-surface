@@ -129,11 +129,22 @@ nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSeeded
 nnUNetv2_train 100 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerAffinity_100epochs           # 0.5226
 ```
 
+The other two candidates from the same 5-way comparison change the *input*, not the loss, so
+they use nnU-Net's own stock `nnUNetTrainer_100epochs` on two auxiliary-channel datasets built
+by `scripts/data_prep/`:
+
+```bash
+# highpass-only channel = volume - gaussian_blur(volume, sigma=1.0), see scripts/data_prep/highpass.py
+python scripts/data_prep/build_dataset101_laplacian.py         # writes Dataset101 (raw CT + highpass channel)
+python scripts/data_prep/build_dataset102_highpass_only.py     # writes Dataset102 (highpass channel alone), reuses Dataset101's output
+# then standard nnU-Net preprocessing for each new dataset id (101, 102), plus copying this
+# project's own LOSO splits_final.json over nnU-Net's auto-generated one -- see
+# build_dataset101_laplacian.py's own docstring for the exact preprocessing commands
+nnUNetv2_train 101 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainer_100epochs   # laplacian (raw + highpass): 0.5122
+nnUNetv2_train 102 3d_lowres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainer_100epochs   # highpass-only: 0.5204
+```
+
 Skeleton-recall (Kirchhoff et al., ECCV 2024, ported as `nnUNetTrainerSkeletonRecall`) won.
-Two other candidates from the original 5-way comparison (highpass-only, laplacian) are
-recorded as historical numbers in `experiment_summary.md` Phase 3 item 11 but have no
-surviving reproducible trainer code, so — same principle as step 8's note below — they're
-left out of this list rather than given a command that wouldn't actually run.
 
 ### 7. Extend the winner: skeleton-recall to 700 epochs (our own line)
 
