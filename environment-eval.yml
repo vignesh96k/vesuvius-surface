@@ -1,0 +1,34 @@
+name: vesuvius_eval
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - cmake=3.31.6
+  - pip:
+      - numpy==1.26.4
+      - scipy==1.15.3
+      - scikit-image==0.25.2
+      - tifffile==2025.6.11
+      - imagecodecs==2025.8.2
+      - pybind11[global]==2.13.6
+      - surface-distance==0.1
+      - connected-components-3d==3.26.0
+      - build==1.2.2.post1
+      - pytest
+
+# The official leaderboard-equivalent scorer's own environment. DELIBERATELY SEPARATE from
+# environment-train.yml -- do not merge these.
+#
+# Why: these pins are older than environment-train.yml's (numpy 1.26.4 here vs. training's
+# numpy tied to a modern torch build). The compiled Betti-Matching-3D C++ extension
+# (packages/vesuvius_evaluation) is built and tested against exactly these versions.
+# Force-downgrading numpy in the training env to match would risk a C-ABI break that can
+# silently corrupt torch/nnU-Net's own compiled extensions -- evaluation never needs to run
+# in the same process as training (it only reads .tif files off disk), so it gets its own env.
+#
+# Setup: conda env create -f environment-eval.yml && conda activate vesuvius_eval
+#   && bash packages/vesuvius_evaluation/scripts/install_topometrics.sh
+#   && pip install -e packages/vesuvius_evaluation --no-deps
+# See packages/vesuvius_evaluation/docs/setup.md for the full walkthrough.

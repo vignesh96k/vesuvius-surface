@@ -1,0 +1,17 @@
+# Pinned to match sohier/vesuvius-metric-resources's own requirements.txt exactly, since the
+# official topometrics-3d package (compiled Betti-Matching-3D C++ extension) is built and tested
+# against these versions. Install into a DEDICATED env (e.g. `vesuvius_eval`), never into the
+# `vesuvius` training env: these pins are older than what `vesuvius` already has (notably
+# numpy==1.26.4 vs vesuvius's numpy 2.4.4), and force-downgrading numpy there risks breaking
+# torch/nnU-Net's compiled extensions. See docs/setup.md.
+numpy==1.26.4
+scipy==1.15.3
+scikit-image==0.25.2
+tifffile==2025.6.11
+imagecodecs==2025.8.2
+pybind11[global]==2.13.6
+cmake==3.31.6
+surface-distance==0.1
+connected-components-3d==3.26.0
+build==1.2.2.post1
+pytest
