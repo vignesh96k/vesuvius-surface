@@ -24,7 +24,7 @@ pp — not stacked with unmerge, each tested separately against the same A3 base
 |---|---|---:|---:|
 | B1 | Zero-shot (3rd place, unmodified) | 0.7198 | 0.58667 public / 0.62410 private |
 | B2 | + skeleton-recall last-layers fine-tune | 0.7248 | — |
-| B3 | + 1st-place postprocessing | 0.7363 | pending (submitted, not yet scored) |
+| B3 | + 1st-place postprocessing | 0.7363 | 0.59733 public / 0.62253 private |
 | B4 | + unmerge novelty | 0.7363 (net-neutral) | — |
 
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
@@ -33,6 +33,14 @@ layer passes real per-volume accept gates on both lines (19/129 and 38/129 respe
 the aggregate score across all 129 cases is unchanged to full float precision on both. A5's
 fragment-bridging layer (Track A only so far) is a real, non-negative gain by construction
 (32/129 accepted) — see step 12.
+
+**Final-submission variant**: the A2/A3 skeleton-recall-700ep model above is `fold_0` (trained
+on 657 of 786 cases, scroll 26010 held out for LOSO validation). A separate run of the exact
+same recipe on `fold=all` (all 786 cases, no held-out split — real submission only, no local
+LOSO number is possible for it by construction) scored **0.54920 public / 0.57991 private**
+without postprocessing — both public and private higher than the fold_0 model's equivalent
+(A2: 0.54454/0.55773), consistent with more training data helping. The +1st-place-pp variant
+of this fold=all model was submitted alongside it and is still pending.
 
 ## Quickstart
 
