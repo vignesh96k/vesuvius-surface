@@ -522,3 +522,64 @@ against for the honest current numbers before citing this anywhere.
 
 [1st]: https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection/writeups/1st-place-solution-for-the-vesuvius-challenge-su
 
+## 16. From negative results to the one real win, and the full picture
+
+Sections 1–15 stop before the fine-tuning attempts actually ran. This section closes the gap.
+Full numbers for everything below live in `experiment_summary.md`; this section is the
+narrative — what was tried, in what order, and why each pivot happened. The real orchestration
+(shell scripts wiring `nnUNetv2_train`/prediction/scoring together with hardcoded PIDs and
+paths for a single overnight run) is not committed verbatim — it was disposable by
+construction — but every configuration it ran is captured here or in a trainer's own docstring
+(`src/vesuvius_surface/training/trainers/README.md` maps each class to its result).
+
+**Full fine-tuning, three ways, three negative results.** STU-Net (chosen specifically because
+it's provably leak-free — TotalSegmentator-pretrained, never seen a Vesuvius volume) fine-tuned
+worse than the from-scratch baseline (0.4629 vs. 0.5575). A 5-way 100-epoch comparison
+(skeleton-recall, clDice+ScheduleFree, affinity, highpass-only, laplacian) picked
+skeleton-recall as the winner (0.5307) — clDice+ScheduleFree came close (0.5285) but lost.
+Full fine-tuning of arunodhayan's real pipeline (highpass input + skeleton-recall + affinity,
+applied to both the ensemble and the cascade) was unambiguously negative across every
+component metric: cascade 0.7198 → 0.5208, ensemble 0.7029 → 0.5172. A follow-up diagnostic
+isolating skeleton-recall alone (raw CT, no highpass, 20 epochs) partially recovered (0.5768)
+but stayed well below zero-shot — highpass/affinity were part of the regression, not the whole
+story, and the deeper lesson held: full fine-tuning on top of a strong pretrained checkpoint is
+a real risk, not a free win.
+
+**The pivot: freeze almost everything.** Rather than fine-tune the whole cascade, the next
+attempt froze all but the final decoder stage and the deep-supervision heads (0.07% of
+parameters trainable) and trained only that for 10 epochs. First genuinely positive fine-tuning
+result of the project: 0.7248 vs. 0.7198 zero-shot (+0.0050), confirmed on the full 129-case
+LOSO after an initial n=26 diagnostic pointed the same direction. Adding the 1st-place
+postprocessing chain on top pushed it further, to 0.7363 (+0.0165 cumulative) — mostly a
+toposcore gain (0.4819 → 0.5563), with the usual small surface_dice cost from postprocessing.
+The same last-layers recipe, applied to a from-scratch skeleton-recall model extended to 700
+epochs (resuming the 100-epoch winner rather than restarting), landed a smaller but real gain
+in the same direction: 0.5671 vs. 0.5597 (no-skeleton-recall baseline), toposcore up sharply
+(0.2021 → 0.3028) — the clearest direct evidence in this project that skeleton-recall's loss
+term does what it's designed to do.
+
+**Methodological rigor kept in the loop, not skipped for speed.** The fast last-layers result
+above was trained on non-TTA (`--disable_tta`) cascade previous-stage data for speed, but
+scored against a TTA-generated baseline — a real train/eval mismatch, caught and named before
+being reported as clean. A second, fully TTA-consistent confirmatory run of the same recipe was
+built and queued specifically to close that gap (see `docs/reproducibility_notes.md` for its
+status as of this repo's last update).
+
+**The novelty layer, run for real.** `unmerge.py` (§15) was calibrated on 5 cases with zero
+measured accepted improvement in that small sample. Run for real on the full 129-case LOSO set
+against the last-layers cascade model's predictions: 25 of 129 volumes had a genuine merge
+candidate, 19 were accepted by the metric-improvement gate — a real, non-trivial fraction, not
+noise. The same pipeline was run a second time on the from-scratch skeleton-recall line. Final
+aggregate score deltas for both lines are in `experiment_summary.md`.
+
+**Real Kaggle submissions, including two genuine bugs found and fixed live.** Submitting the
+final skeleton-recall model (with postprocessing) surfaced that Kaggle's `/kaggle/input` mount
+path convention for custom datasets is **not consistent even within one account, in the same
+kernel run** — one attached dataset mounted at the new nested
+`/kaggle/input/datasets/<owner>/<slug>/` path, a different one (pushed from the exact same
+kernel metadata shape) mounted at the old flat `/kaggle/input/<slug>/` path. The fix that
+shipped probes both candidate paths and uses whichever exists
+(`resolve_dataset_mount` in the submission notebook), rather than assuming either convention.
+A second, unrelated bug (a stale function reference left over from a mid-session rename) was
+caught the same way: real error, real fix, re-verified end to end before trusting the result.
+
