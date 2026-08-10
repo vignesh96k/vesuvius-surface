@@ -228,11 +228,10 @@ Results: our line 0.5671 → 0.5683 (+0.0012); arunodhayan line 0.7248 → 0.736
 ### 11. Metric-guided unmerge (novelty), both lines
 
 This project's own contribution, not from any public source (see `docs/attribution.md`) —
-motivated by `voi_merge` sitting essentially flat across every stage of the 1st-place chain:
-it repairs holes *inside* a component but is merge-blind by construction, never severing a
-bridge fused *between* two. Method: erode each component, treat surviving multi-seed splits
-as merge candidates, partition via nearest-seed Voronoi tessellation, cut the boundary, accept
-only if the official metric improves on that volume.
+`voi_merge` stays flat across the 1st-place chain because it never severs a bridge fused
+*between* two components. Method: erode each component, treat surviving multi-seed splits as
+merge candidates, cut via nearest-seed Voronoi tessellation, accept only if the metric
+improves.
 
 ```bash
 python scripts/run_postprocess.py --method unmerge --workers 8 \
