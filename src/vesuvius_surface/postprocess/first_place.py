@@ -25,7 +25,7 @@ belongs in separate modules that call into this baseline.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Optional, Sequence
+from typing import Optional
 
 import numpy as np
 from scipy import ndimage

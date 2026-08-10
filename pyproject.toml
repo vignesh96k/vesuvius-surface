@@ -36,3 +36,18 @@ markers = [
     "manual: requires real data/checkpoints and is not automated (excluded from CI)",
 ]
 testpaths = ["tests/unit"]
+
+[tool.ruff]
+# third_party/ is vendored, unmodified third-party code -- not ours to lint.
+# packages/vesuvius_evaluation/ has its own env/lint scope, kept separate on purpose.
+# notebooks/ excluded: import-for-side-effect cells (e.g. "import X; print('X installed OK')")
+# are a normal, intentional notebook pattern that F401 can't distinguish from a real bug.
+exclude = ["third_party", "packages", "notebooks"]
+
+[tool.ruff.lint]
+# Pyflakes only (F): unused imports, undefined names, real correctness issues. Deliberately
+# NOT the default rule set (pycodestyle E/W, line length, etc.) -- this is a research
+# codebase with an established dense-comment style (see CLAUDE.md-equivalent guidance in
+# this project's own commits), and reformatting hundreds of long, information-dense lines
+# for style compliance is out of scope for a restructuring pass. Correctness over style.
+select = ["F"]

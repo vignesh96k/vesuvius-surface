@@ -10,7 +10,7 @@ Answers that constrain architecture / sampling / validation / loss later:
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Optional, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd

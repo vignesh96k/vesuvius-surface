@@ -24,13 +24,10 @@ import random
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 from nnunetv2.training.loss.compound_losses import DC_and_CE_loss
 from nnunetv2.training.loss.dice import MemoryEfficientSoftDiceLoss
 from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
-from nnunetv2.utilities.helpers import dummy_context
-from torch import autocast
 from schedulefree import RAdamScheduleFree
 
 

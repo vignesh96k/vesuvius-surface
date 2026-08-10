@@ -24,7 +24,6 @@ import logging
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

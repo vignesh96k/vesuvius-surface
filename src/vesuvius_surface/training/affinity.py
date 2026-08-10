@@ -44,7 +44,7 @@ notion of an instance, not an idealised one.
 
 from __future__ import annotations
 
-from typing import Iterable, Sequence, Tuple
+from typing import Sequence, Tuple
 
 import numpy as np
 
