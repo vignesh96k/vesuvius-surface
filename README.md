@@ -70,12 +70,7 @@ jupyter nbconvert --to notebook --execute notebooks/01_dataset_overview.ipynb
 ```
 
 786 usable volumes across 6 scrolls with wildly uneven sizes (scroll 34117 has 376 volumes,
-53997 has 13), class balance 37% background / 4.9% surface / 58% ignore, median sheet
-thickness 2 voxels (matters for every postprocessing/novelty parameter downstream). Also
-where the official metric (`0.30×TopoScore + 0.35×SurfaceDice@2vox + 0.35×VOI`, **not**
-Dice-like) and the real hidden test-set composition (71% "familiar scroll", 29% "genuinely
-novel scroll", from the competition's own discussion forum) were established — see
-`docs/metric.md`.
+53997 has 13), class balance 37% background / 4.9% surface / 58% ignore.
 
 ### 3. Build the LOSO validation split
 
