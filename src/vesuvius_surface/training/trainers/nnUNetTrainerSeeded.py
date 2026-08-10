@@ -18,18 +18,18 @@ package -- see nnunetv2.utilities.find_objects.recursive_find_trainer_class_by_n
 from __future__ import annotations
 
 import os
-import random
 
-import numpy as np
 import torch
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
+from vesuvius_surface.training.seeding import seed_everything
 
-def _seed_everything(seed: int) -> None:
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+# Kept as an alias: earlier versions of this file defined _seed_everything locally, and
+# nothing else in this repo should start depending on the private name going forward -- use
+# vesuvius_surface.training.seeding.seed_everything directly in new code. See that module for
+# why it's split out: dependency-free (no nnunetv2), so it's testable without installing the
+# full nnU-Net trainer stack (tests/unit/test_seeded_trainer.py).
+_seed_everything = seed_everything
 
 
 class _SeededMixin:
@@ -39,7 +39,7 @@ class _SeededMixin:
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         self.seed = int(os.environ.get("NNUNET_SEED", 42))
-        _seed_everything(self.seed)
+        seed_everything(self.seed)
         print(f"[nnUNetTrainerSeeded] seeded torch/numpy/random with seed={self.seed}")
         super().__init__(plans, configuration, fold, dataset_json, device)
 
