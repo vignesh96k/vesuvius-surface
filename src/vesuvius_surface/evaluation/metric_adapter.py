@@ -5,9 +5,21 @@ Installed from the Kaggle dataset `sohier/vesuvius-metric-resources` via
 
     Score = 0.30*TopoScore + 0.35*SurfaceDice@2.0 + 0.35*VOI_score
 
-We call `compute_leaderboard_score` with its own defaults and override nothing,
-so local numbers stay in parity with the package. In particular the package
-handles the ignore class itself (`ignore_label=2`) — do not pre-mask labels.
+BUG, FIXED: this module used to call `compute_leaderboard_score` with no explicit
+parameters, on the stated theory that the package's own defaults already matched the
+leaderboard. That was never checked against what `scripts/evaluation/score_model.py` (and
+every one-off scoring script that produced this project's actual reported numbers) explicitly
+passes. They differ on exactly one parameter: the package's own default is `voi_alpha=1.0`;
+every real reported number in `experiment_summary.md` was computed with `voi_alpha=0.3`.
+Verified directly: scoring the same real case both ways gives score=0.5204 (alpha=1.0,
+this module's old behavior) vs. score=0.6182 (alpha=0.3, matches the number already on
+record for that exact case in a prior scoring run). Since `apply_unmerge` in
+postprocess/unmerge.py calls this function directly for its own accept/reject gate, this
+bug meant the unmerge novelty layer's accept/reject decisions were made against a metric
+that doesn't match what the project reports everywhere else -- not just a scoring-time
+issue. `DEFAULT_METRIC_KWARGS` below now pins every parameter explicitly, matching
+score_model.py's call exactly, so there is one source of truth instead of two silently
+divergent ones.
 """
 
 from __future__ import annotations
@@ -21,6 +33,19 @@ METRIC_WEIGHTS: Final[dict[str, float]] = {
     "topo_score": 0.30,
     "surface_dice": 0.35,
     "voi_score": 0.35,
+}
+
+DEFAULT_METRIC_KWARGS: Final[dict[str, Any]] = {
+    "dims": (0, 1, 2),
+    "spacing": (1.0, 1.0, 1.0),
+    "surface_tolerance": 2.0,
+    "voi_connectivity": 26,
+    "voi_transform": "one_over_one_plus",
+    "voi_alpha": 0.3,
+    "combine_weights": (0.30, 0.35, 0.35),
+    "fg_threshold": None,
+    "ignore_label": 2,
+    "ignore_mask": None,
 }
 
 _CANDIDATE_MODULES: Final[tuple[str, ...]] = (
@@ -63,11 +88,13 @@ def score_pair(
     """Score one prediction against one raw label volume.
 
     `label` should be the untouched label with its ignore class intact.
-    `overrides` are passed straight through to `compute_leaderboard_score`;
-    leave empty for leaderboard parity.
+    Calls `compute_leaderboard_score` with `DEFAULT_METRIC_KWARGS` (matching
+    scripts/evaluation/score_model.py exactly -- see this module's docstring for why that
+    match matters), overridden by anything passed in `overrides`.
     """
     module = load_metric_module()
-    report = module.compute_leaderboard_score(prediction, label, **overrides)
+    kwargs = {**DEFAULT_METRIC_KWARGS, **overrides}
+    report = module.compute_leaderboard_score(prediction, label, **kwargs)
 
     topo = getattr(report, "topo", None)
     voi = getattr(report, "voi", None)
