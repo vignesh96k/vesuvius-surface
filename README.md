@@ -112,9 +112,10 @@ Full list with detail in `docs/reproducibility_notes.md`. Headline items: the ar
 full-fine-tune result isn't reproducible from a clean script (the real driver was hardcoded,
 vendored verbatim rather than presented as something it isn't); no ensembling/TTA-combination
 script exists to reproduce how the real A/B ensemble predictions were combined; local LOSO
-scores only validate the 71% of real grading that comes from scrolls also seen in training (the
-other 29% is genuinely novel scrolls, discovered via the competition's own discussion forum,
-not locally simulable).
+scores hold out an *entire* scroll, so they validate the harder ~29% "genuinely novel scroll"
+portion of real grading (discovered via the competition's own discussion forum, not locally
+simulable otherwise) — the easier ~71% "novel case, familiar scroll" majority isn't directly
+tested by LOSO at all, since by construction its held-out scroll has zero presence in training.
 
 ## Packaging notes
 

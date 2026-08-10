@@ -14,8 +14,10 @@ to a real log line, not an estimate.
    Installed the official scorer package (Betti-Matching-3D based) rather than reimplementing it.
 3. Reverse-engineered the real hidden test set's composition via the Kaggle discussion forum API (not
    guessed): 71% of test samples are from scroll IDs also present in training, 29% from genuinely novel
-   scrolls. Directly shaped validation design; stated as an explicit limitation of every local number
-   since (local scores can only validate the easier 71% "seen scroll" majority).
+   scrolls. Directly shaped validation design; stated as an explicit limitation of every local LOSO
+   number since — LOSO holds out an *entire* scroll, so it validates the harder ~29% "genuinely novel
+   scroll" portion, not the easier ~71% "seen scroll" majority (by construction, LOSO's held-out scroll
+   has zero presence in training, matching the novel-scroll case, not the seen-scroll one).
 
 ## Phase 1 — Validation protocol
 
