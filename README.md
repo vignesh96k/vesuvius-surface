@@ -56,9 +56,6 @@ pytest tests/unit
 
 ## Step by Step
 
-This is the actual order the project happened in, and every step below has a real command
-attached — this repo doesn't ask you to take any result on faith.
-
 ### 1. Get the data
 
 ```bash
