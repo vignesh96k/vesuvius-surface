@@ -25,8 +25,7 @@ add skeleton-recall → add 1st-place postprocessing → add the unmerge novelty
 | B4 | + unmerge novelty | 0.7363 (net-neutral) | — |
 
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
-cases), scored with the real leaderboard-equivalent metric — see `docs/reproducibility_notes.md`
-for why local and real-leaderboard numbers don't match 1:1. "Net-neutral" (A4/B4): the unmerge
+cases), scored with the real leaderboard-equivalent metric. "Net-neutral" (A4/B4): the unmerge
 layer passes real per-volume accept gates on both lines (19/129 and 38/129 respectively), but
 the aggregate score across all 129 cases is unchanged to full float precision on both — a real,
 checked result, not an approximation. Other real result, not part of either track's ladder:
