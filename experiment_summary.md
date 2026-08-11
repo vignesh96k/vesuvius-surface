@@ -14,15 +14,18 @@ to a real log line, not an estimate.
    Installed the official scorer package (Betti-Matching-3D based) rather than reimplementing it.
 3. Reverse-engineered the real hidden test set's composition via the Kaggle discussion forum API (not
    guessed): 71% of test samples are from scroll IDs also present in training, 29% from genuinely novel
-   scrolls. Directly shaped validation design; stated as an explicit limitation of every local number
-   since (local scores can only validate the easier 71% "seen scroll" majority).
+   scrolls. Directly shaped validation design; stated as an explicit limitation of every local LOSO
+   number since — LOSO holds out an *entire* scroll, so it validates the harder ~29% "genuinely novel
+   scroll" portion, not the easier ~71% "seen scroll" majority (by construction, LOSO's held-out scroll
+   has zero presence in training, matching the novel-scroll case, not the seen-scroll one).
 
 ## Phase 1 — Validation protocol
 
 4. Decided LOSO (leave-one-scroll-out, scroll 26010 held out — 657 train / 129 val) as the primary
-   protocol, cross-checked with stratified 80/20 k-fold. Three independent stratified folds landed
-   within ~0.01 of each other (0.5162 / 0.5079 / 0.5051) — real convergent evidence the split isn't a
-   lucky/unlucky draw, not assumed.
+   protocol, cross-checked with stratified 80/20 k-fold. Three independent stratified folds
+   (0.5079 / 0.5051 / 0.5084) landed within 0.0033 of each other, and within 0.0111 of the LOSO
+   number itself (0.5162) — real convergent evidence the split isn't a lucky/unlucky draw, not
+   assumed.
 5. Discovered a contamination problem: **both** arunodhayan's checkpoint (3rd place) and the actual
    1st-place checkpoint (`scrollprize/surface_m7_nnunet`, public on HuggingFace, Apache-2.0 — a third
    public reference source) were trained on 100% of available data ("we abandoned the traditional K-Fold
@@ -120,9 +123,27 @@ to a real log line, not an estimate.
     partition the original component via nearest-seed Voronoi tessellation, cut the partition boundary,
     accept only if the official metric improves on that volume (never a per-cut heuristic).
     `erosion_radius` calibrated from a real distance-transform measurement (median sheet half-thickness
-    ~1 voxel), not guessed. Real run tonight on the full 129 cases (arunodhayan line): 25/129 volumes had
-    candidate cuts, 19/129 accepted by the score gate. Final aggregate score still computing as of this
-    writing (both the arunodhayan-line and our-own-line versions are running in the background).
+    ~1 voxel), not guessed. Full 129-case LOSO run, both lines:
+
+    | line | candidate cuts | accepted | control score | unmerge_accepted score | delta |
+    |---|---:|---:|---:|---:|---:|
+    | B4 (arunodhayan cascade-lastlayers + 1st-place pp) | 25/129 | 19/129 | 0.7362712389124269 | 0.7362712389124269 | +0.0 (exact) |
+    | A4 (our own 700ep skeleton-recall + 1st-place pp) | 57/129 | 38/129 | 0.5682620632580213 | 0.5682707599558241 | +0.0000087 |
+
+    B4 is unchanged to full float precision. A4 has a real but negligible positive delta. Not a bug in
+    either case: the accept gate only requires `delta >= 0.0` on a single volume, so accepted cuts can
+    be individually real but too small to move a 129-case mean. Honest read: net-neutral on both lines,
+    not a demonstrated win, despite nonzero accept rates on both.
+
+    **These numbers were re-scored after fixing a real bug** in `evaluation/metric_adapter.py`:
+    `score_pair` was silently calling the metric package with its own default `voi_alpha=1.0` instead
+    of the `voi_alpha=0.3` every other reported number in this project uses (confirmed by scoring the
+    same real case both ways: 0.5204 vs. 0.6182, the latter matching the already-on-record number
+    exactly). Since `apply_unmerge` in `unmerge.py` calls `score_pair` directly for its own accept/reject
+    gate, this means every accept/reject decision the unmerge layer has made -- not just today's numbers
+    -- was gated against the wrong metric. The candidate/accept *counts* above are structural (same
+    regardless of which voxels get counted as connected) and unaffected; the aggregate scores are the
+    corrected, re-scored values. See git history on `metric_adapter.py` for the full account.
 
 ## Phase 6 — Real Kaggle submissions
 

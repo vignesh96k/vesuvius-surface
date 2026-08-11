@@ -5,10 +5,11 @@
 # lowres stage's own predictions on the training set as an extra input channel, so it
 # cannot run/fine-tune standalone. See docs/checkpoints.md for where to download both from.
 #
-# NOTE (see docs/reproducibility_notes.md): the checkpoint this repo actually reports numbers
-# for was produced by third_party/arunodhayan_source/train.py, a hardcoded script that never
-# read a config file at all. This yaml describes the *intended* config for future runs via
-# the clean driver below -- it is not a record of what actually happened.
+# NOTE (see docs/reproducibility_notes.md item 1): the *zero-shot starting* checkpoint was
+# produced by third_party/arunodhayan_source/train.py, a hardcoded script that never read a
+# config file at all -- the fine-tuned checkpoint's own training code no longer exists
+# anywhere. This yaml describes the *intended* config for future runs via the clean driver
+# below -- it is not a record of what actually happened for item 12.
 
 paths:
   input_dir: "${VESUVIUS_DATA_ROOT}"                    # see docs/data.md; VESUVIUS_DATA_ROOT env var, no absolute default

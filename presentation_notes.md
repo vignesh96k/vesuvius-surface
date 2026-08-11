@@ -60,8 +60,9 @@ fixed `[IDEA]` a genuinely novel decision or approach, not copied from the publi
 - `[IDEA]` Ran stratified k-fold specifically to test whether the *validation methodology*
   itself was trustworthy — not to find a better model, but to check whether the single LOSO
   number (0.5162) was representative or just a lucky/unlucky draw of which scroll got held
-  out. Result: 3 independent splits landed within ~0.01 of each other (0.5162 / 0.5079 /
-  0.5051) — real convergent evidence, not assumed.
+  out. Result: 3 independent stratified folds (0.5079 / 0.5051 / 0.5084) landed within 0.0033
+  of each other, and within 0.0111 of the LOSO number itself (0.5162) — real convergent
+  evidence, not assumed.
 
 - `[PUSHBACK]` Proposed reducing the k-fold run from 5 folds to 3 to cut compute time. Argued
   this doesn't need regenerating anything — each of the 5 stratified folds is already an

@@ -1,20 +1,13 @@
-"""Config-driven, CLI-args rewrite of arunodhayan's cascade fine-tuning pipeline.
+"""Config-driven CLI for fine-tuning arunodhayan's cascade checkpoint via nnU-Net's standard
+-pretrained_weights transfer-learning mechanism.
 
-IMPORTANT -- read before using this to claim reproducibility of any reported result: the
-checkpoint this repo's experiment_summary.md actually reports numbers for (Phase 3, item 12 --
-the full arunodhayan highpass+skeleton-recall+affinity fine-tune) was produced by
-third_party/arunodhayan_source/train.py, a 1140-line hardcoded, notebook-derived script with
-no CLI and no config file. This module is a clean reimplementation of that script's core
-fine-tune invocation logic (prepare -> train -> predict), extracted by reading its source, NOT
-verified to reproduce its exact output bit-for-bit. Use this as a readable starting point for
-a *future* fine-tune run, driven by configs/finetune_cascade.yaml -- not as evidence of what
-actually happened. See docs/reproducibility_notes.md for the full, honest gap this represents,
-and see third_party/arunodhayan_source/README.md for the real script.
-
-Also note (a real, separate, related gap): no ensembling/TTA-combination script exists
-anywhere in this project's history to reproduce how the real ensemble A/B ensemble
-predictions were actually combined -- this driver only covers the cascade fine-tune step
-itself, not the ensembling that happens before or after it.
+This module is a generic, config-driven entrypoint written from how nnU-Net's own
+-pretrained_weights transfer learning works, as a readable starting point for a future
+fine-tune run driven by configs/finetune_cascade.yaml. It is a plain fine-tune (no loss/
+architecture change), so it does NOT cover Phase 3, item 12's full arunodhayan fine-tune
+(highpass input + skeleton-recall + affinity loss) -- that one reuses
+`nnUNetTrainerSkeletonRecallAffinity` directly via nnU-Net's own `-tr` + `-pretrained_weights`
+flags, no wrapper script needed. See README.md step 9 for the real command.
 """
 
 from __future__ import annotations

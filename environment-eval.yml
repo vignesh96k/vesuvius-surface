@@ -9,6 +9,7 @@ dependencies:
   - pip:
       - numpy==1.26.4
       - scipy==1.15.3
+      - pandas
       - scikit-image==0.25.2
       - tifffile==2025.6.11
       - imagecodecs==2025.8.2

@@ -40,10 +40,11 @@ whole *volume* rather than the *patch*.
 That one thing is a real cost, and it is the honest weakness of this choice. Two
 fragments of the same sheet that are only connected outside the 128^3 patch look
 like separate instances inside it, so a long-range affinity across them is
-labelled 0 when the volume-level truth is 1. ``scripts/audit_instance_locality.py``
-measures how often that happens; run it before trusting the numbers. The
-short-range offsets, which carry most of the signal, are almost immune — for
-adjacent voxels the connecting path leaves the patch only right at its face.
+labelled 0 when the volume-level truth is 1. This would need measuring (how often
+that happens, over random crops of every training volume) before trusting the
+numbers from a real run. The short-range offsets, which carry most of the signal,
+are almost immune — for adjacent voxels the connecting path leaves the patch only
+right at its face.
 
 Nothing here has been executed. See the bottom of research_log.md.
 """

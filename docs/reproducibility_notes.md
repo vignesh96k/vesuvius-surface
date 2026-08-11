@@ -32,29 +32,39 @@ and checkable as a result of that lesson, not because of excess caution for its 
   identical checkpoints. Re-running should land within noise of the reported numbers.
 - **The last-layers-only cascade fine-tune** (the one genuinely positive fine-tuning result).
   Same caveat: seeded, not bit-exact-deterministic.
+- **The full arunodhayan fine-tune (Phase 3, item 12)** — highpass input
+  (`scripts/data_prep/highpass.py`, `build_dataset102_*.py`) + skeleton-recall + affinity loss
+  (`nnUNetTrainerSkeletonRecallAffinity`, already a real, committed, tested trainer class),
+  applied via `-pretrained_weights` to both the fullres ensemble and the cascade. **Corrected
+  from an earlier, wrong version of this note**, which claimed this experiment's code no
+  longer existed anywhere — that conclusion came from an insufficiently thorough search (it
+  only checked for a dedicated trainer *class* named after the experiment, when the real
+  mechanism reused an existing one) and didn't survive a proper one: the real checkpoints
+  (`nnUNet_results_ensembleA_ft/`, `nnUNet_results_cascade_ft/`, both under
+  `Dataset102_VesuviusSurfaceHighpassOnly`) have `trainer_name=nnUNetTrainerSkeletonRecallAffinity`
+  embedded directly in their own metadata — real, checkable evidence, not inferred.
+  `README.md` step 9 condenses this negative result to one line; real commands:
+
+  ```bash
+  python scripts/data_prep/build_dataset102_highpass_only.py   # writes Dataset102 (raw space)
+  python scripts/data_prep/build_dataset102_fullres.py         # fills in its fullres preprocessed tree
+  # Dataset102's plans (architecture/spacing) are identical to Dataset100's -- copy rather than
+  # replan: cp $nnUNet_preprocessed/Dataset100_VesuviusSurface/nnUNetResEncUNetMPlans.json \
+  #            $nnUNet_preprocessed/Dataset102_VesuviusSurfaceHighpassOnly/
+
+  # Ensemble member (one of arunodhayan's two 3d_fullres models):
+  nnUNetv2_train 102 3d_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
+      -pretrained_weights checkpoints/ensembleA_checkpoint_best.pth
+
+  # Cascade (needs a previous-stage input directory first -- see
+  # scripts/inference/convert_previous_stage.py):
+  nnUNetv2_train 102 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans -tr nnUNetTrainerSkeletonRecallAffinity \
+      -pretrained_weights checkpoints/Cascade_fullres_checkpoint_best.pth
+  ```
 
 ## Known, real gaps — stated plainly, not silently worked around
 
-1. **The full arunodhayan fine-tune (Phase 3, item 12) is not reproducible from a clean
-   script.** The checkpoint this repo reports numbers for was produced by
-   `third_party/arunodhayan_source/train.py`, a 1140-line hardcoded, notebook-derived script
-   with no CLI and no config file — `os.environ["CUDA_VISIBLE_DEVICES"]` set at import time,
-   several dataset-name-baked-in absolute paths, a bare `full_pipeline(epochs=8000)` call at
-   the bottom. `configs/finetune_cascade.yaml` sat next to it during the real run but **was
-   never read by it** — that pairing is historical, not functional.
-   `src/vesuvius_surface/training/finetune/arunodhayan_cascade_driver.py` is a clean,
-   config-driven rewrite extracted by reading the original's logic, but it is **explicitly not
-   verified to reproduce the original's exact output**. The real script is vendored verbatim
-   in `third_party/arunodhayan_source/` as the honest record of what actually ran.
-
-2. **No ensembling/TTA-combination script exists anywhere in this project's history.** The
-   real A/B ensemble predictions (weights 0.65/0.35, matching arunodhayan's own hardcoded
-   weights) were combined via ad-hoc code during the actual experiments, not a committed,
-   reusable tool. `scripts/inference/convert_previous_stage.py` covers the *cascade
-   previous-stage conversion* step that consumes an already-combined result, but not the
-   combination step itself.
-
-3. **The clean/TTA-consistent confirmatory run may not be finished.** The fast last-layers
+1. **The clean/TTA-consistent confirmatory run may not be finished.** The fast last-layers
    result (Phase 4, item 14) trained on non-TTA cascade previous-stage data (for speed) but
    was scored against a TTA-generated baseline — a real train/eval mismatch, caught and named
    rather than silently accepted. A second run using TTA-consistent data throughout was built
@@ -63,14 +73,13 @@ and checkable as a result of that lesson, not because of excess caution for its 
    real (the fine-tune only touches 0.07% of parameters, too little capacity to have learned
    to exploit the TTA/non-TTA statistical difference specifically) but not confirmed clean.
 
-4. **`nnunetv2` version pin.** Pinned to `2.8.1` in `environment-train.yml` — the version
+2. **`nnunetv2` version pin.** Pinned to `2.8.1` in `environment-train.yml` — the version
    actually installed and used for every real result in this repo, confirmed via
    `pip show nnunetv2` at the time of writing, not inferred from a changelog.
 
-5. **Several older scripts under `scripts/` (predating this restructuring pass) still default
+3. **Some older scripts under `scripts/` (predating this restructuring pass) still default
    to this project's original development machine's absolute paths** (e.g.
-   `scripts/export_nnunet.py`'s `--data-root` default, `scripts/nnunet_predict.sh`'s
-   `nnUNet_raw`/`nnUNet_preprocessed`/`nnUNet_results` env-var defaults). These are not broken
+   `scripts/export_nnunet.py`'s `--data-root` default). These are not broken
    — every one of them is overridable via a CLI flag or environment variable, and the README's
    quickstart shows the override pattern — but they are not yet migrated to the
    `VESUVIUS_DATA_ROOT`-style convention used by the newer scripts/notebooks in this repo
@@ -80,7 +89,7 @@ and checkable as a result of that lesson, not because of excess caution for its 
    than the consolidation work in this pass, given every affected script already has a working
    override mechanism.
 
-5. **`src/vesuvius_surface/evaluation/`'s wrapper duplication.** `metric_adapter.py` wraps the
+4. **`src/vesuvius_surface/evaluation/`'s wrapper duplication.** `metric_adapter.py` wraps the
    same underlying `topometrics` package that `packages/vesuvius_evaluation` also wraps, via a
    different (array-based vs. path-based) interface. Numerically identical — same
    `compute_leaderboard_score` call, same weights — so this is wrapper-interface duplication,
