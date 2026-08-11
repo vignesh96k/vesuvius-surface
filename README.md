@@ -349,8 +349,18 @@ own env) for the ABI reason above, not flattened in.
 LOSO-split leakage checks, the seeding utility, parallel-vs-sequential scoring dispatch), runs
 in CI, no GPU/dataset needed. `tests/functional/` needs real data/checkpoints
 (`VESUVIUS_DATA_ROOT`, `VESUVIUS_TEST_CHECKPOINT_DIR`) and is manual-only. Real training,
-scoring, and Kaggle submissions are GPU/hours/account-scale and stay manual —
-Real training, scoring, and Kaggle submissions are GPU/hours/account-scale and stay manual.
+scoring, and Kaggle submissions are GPU/hours/account-scale and stay manual.
+
+## Use of AI
+
+- **ChatGPT** — used for discussions on research literature and brainstorming.
+- **Claude** — used for the pipeline coding end to end via the VS Code connector, and also
+  for debugging, engineering solutions, and ideas.
+- **Cursor** — had limited credits; used just for formulating and understanding the
+  postprocessing techniques.
+
+All research and modelling decisions were taken and formulated solely by the author.
+Valuable input from these tools was considered, not treated as authoritative.
 
 ## License
 
