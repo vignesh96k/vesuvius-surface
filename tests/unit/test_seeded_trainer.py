@@ -6,7 +6,7 @@ docstring for why the split exists.
 
 This is the only RNG-seeding fix anywhere in the project: stock nnU-Net sets no seed anywhere
 (verified from nnUNetTrainer.__init__ and the nnUNetv2_train CLI arg list directly, not
-assumed). Every from-scratch baseline result in experiment_summary.md traces back to this
+assumed). Every from-scratch baseline result in this project traces back to this
 function actually working.
 """
 from __future__ import annotations

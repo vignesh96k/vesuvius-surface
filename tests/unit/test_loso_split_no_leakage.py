@@ -1,9 +1,9 @@
 """Unit tests asserting the split-generation functions in scripts/make_scroll_split.py never
 leak a scroll or a case across folds -- directly on-theme for this project, whose whole
-validation-protocol section (research_log.md sections 4/7/8, this README's "known limitations")
-exists because of a real, hard-won lesson about split leakage. This is the single test most
-likely to catch a regression that actually matters: every reported LOSO/local number in
-experiment_summary.md depends on these functions producing a genuine, scroll-disjoint split.
+validation-protocol design exists because of a real, hard-won lesson about split leakage.
+This is the single test most likely to catch a regression that actually matters: every
+reported LOSO/local number in this project depends on these functions producing a genuine,
+scroll-disjoint split.
 """
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ _spec.loader.exec_module(make_scroll_split)
 
 
 def _synthetic_dataset(n_scrolls: int = 6, cases_per_scroll: int = 20) -> tuple[list[str], dict[str, str]]:
-    """Mimics this project's real, very uneven scroll sizes (research_log.md section 2:
-    one scroll has 376 cases, another has 13) by giving each scroll a different count."""
+    """Mimics this project's real, very uneven scroll sizes (one scroll has 376 cases,
+    another has 13) by giving each scroll a different count."""
     case_ids: list[str] = []
     scroll_map: dict[str, str] = {}
     for s in range(n_scrolls):
@@ -93,8 +93,8 @@ class TestStratifiedFolds:
     def test_every_scroll_has_a_share_in_every_fold(self):
         """The whole point of stratified folds vs. scroll-holdout: unlike LOSO, every fold
         should get proportional representation from every scroll, including small ones --
-        this is what research_log.md section 8 calls fixing the "blind spot" (a scroll with
-        zero cases in the holdout hides that scroll's failure mode entirely)."""
+        this fixes the "blind spot" problem (a scroll with zero cases in the holdout hides
+        that scroll's failure mode entirely)."""
         case_ids, scroll_map = _synthetic_dataset(n_scrolls=6, cases_per_scroll=20)
         folds = make_scroll_split.stratified_folds(case_ids, scroll_map, n_splits=5, seed=42)
 

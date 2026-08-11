@@ -5,8 +5,8 @@ second input channel = first (finest) high-pass sub-band of a 3D Laplacian pyram
 are symlinked from Dataset100 (no duplication); channel 1 is newly computed and written as
 a float32 TIFF.
 
-This is experiment_summary.md Phase 3 item 11's "laplacian" candidate in the 100-epoch 5-way
-loss/input comparison (real result: 0.5122, lost to skeleton-recall's 0.5307). New dataset ID
+This is the "laplacian" candidate in the 100-epoch 5-way loss/input comparison (real
+result: 0.5122, lost to skeleton-recall's 0.5307). New dataset ID
 (101) deliberately, so Dataset100 (in active use everywhere else) stays untouched.
 
 After this script, run standard nnU-Net preprocessing, then copy this project's own LOSO

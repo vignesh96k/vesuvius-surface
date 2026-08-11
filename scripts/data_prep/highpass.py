@@ -8,8 +8,8 @@ resolution, before any downsampling -- the same sub-band decomposition idea from
 Real, previously-executed code (not a reconstruction) -- the exact function that produced
 Dataset101_VesuviusSurfaceLaplacian's channel 1 (see build_dataset101_laplacian.py), which
 in turn was reused as Dataset102_VesuviusSurfaceHighpassOnly's sole channel. These two
-datasets are experiment_summary.md Phase 3 item 11's "laplacian" and "highpassonly"
-candidates in the 100-epoch 5-way comparison.
+datasets are the "laplacian" and "highpassonly" candidates in the 100-epoch 5-way
+comparison.
 """
 from __future__ import annotations
 

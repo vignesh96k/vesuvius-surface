@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SUPERSEDED: the real Phase 3 item-10 result did not use this script -- it downloaded
-# STU-Net-B's weights directly from HuggingFace ziyanhuang/STU-Net (see docs/checkpoints.md)
+# STU-Net-B's weights directly from HuggingFace ziyanhuang/STU-Net
 # and fine-tuned with the project's own installed nnunetv2, not this isolated-env / vendored
 # STU-Net-fork setup. Kept for reference only; README.md step 9 uses
 # scripts/finetune/run_finetuning_stunet_freeze_early.py instead.

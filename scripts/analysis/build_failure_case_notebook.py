@@ -3,7 +3,7 @@
 structure (run this script, don't hand-edit the notebook).
 
 Requires the per-case official-metric score JSONs and prediction directories for both
-models to already exist (see VESUVIUS_* env vars below and docs/checkpoints.md) -- this
+models to already exist (see VESUVIUS_* env vars below) -- this
 script only assembles + can re-run the notebook; it does not itself run inference or
 scoring. The committed notebook already has real, executed output cells (real images,
 real overlap finding); re-running this script only regenerates it from scratch."""

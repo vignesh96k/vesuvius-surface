@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Downloads a checkpoint (or wheel bundle) from a Kaggle Dataset. See docs/checkpoints.md
-# for the real slugs this project's results depend on.
+# Downloads a checkpoint (or wheel bundle) from a Kaggle Dataset.
 #
 # Usage: bash scripts/download_weights.sh <kaggle-dataset-slug> <destination-dir>
 # Example: bash scripts/download_weights.sh vigneshk96/vesuvius-1000epoch-checkpoint-v1 checkpoints/1000ep
@@ -8,7 +7,6 @@ set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
   echo "Usage: bash scripts/download_weights.sh <kaggle-dataset-slug> <destination-dir>"
-  echo "See docs/checkpoints.md for real slugs."
   exit 1
 fi
 

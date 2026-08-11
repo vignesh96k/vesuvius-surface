@@ -40,7 +40,7 @@ components span most of a 320^3 array even after cropping to their own bounding 
 to iterate with; the nearest-surface-point design replaces it entirely.
 
 Real validation (full 129-case LOSO, Track A skeleton-recall 700ep model, this project's own
-predictions -- see docs/decisions.md for the full account): applied as a genuinely new third
+predictions): applied as a genuinely new third
 stage on top of the ALREADY-DEPLOYED, unconditional 1st-place pp output (not instead of it),
 gated the same way this module always gates: 0.5683 (pp alone, matching README step 10's real
 number exactly) -> 0.5691 (+0.0009, non-negative by construction). 32/129 cases had their

@@ -2,7 +2,7 @@
 
 The bet
 -------
-research_log.md §6 measured ``voi_split`` and ``voi_merge`` both around 1.0:
+Measured directly on this project's own held-out cases: ``voi_split`` and ``voi_merge`` sit around 1.0:
 sheets are fragmented and neighbouring sheets are fused, in equal measure, and
 the 1st-place team never solved the fused case. Those are the two error classes
 VOI was invented to measure, and the connectomics literature attacks them by
@@ -46,7 +46,7 @@ numbers from a real run. The short-range offsets, which carry most of the signal
 are almost immune — for adjacent voxels the connecting path leaves the patch only
 right at its face.
 
-Nothing here has been executed. See the bottom of research_log.md.
+Nothing here has been executed.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """Unit tests for the metric-guided unmerge novelty layer's pure geometry logic
 (propose_cuts and its helpers) -- no GPU, no dataset, no metric package needed.
 
-This is the project's own novel contribution (see docs/attribution.md), and had zero test
+This is the project's own novel contribution, and had zero test
 coverage before this file -- these tests exercise the actual bridge-detection/cutting logic
 directly on small synthetic volumes with known, hand-verifiable geometry, the same way
 tests/unit/test_affinity_targets.py already does for the affinity-target math.
@@ -66,7 +66,7 @@ class TestProposeCuts:
     def test_small_seeds_below_threshold_are_not_candidates(self):
         """The same two-blob-thin-bridge geometry, but with min_seed_size set higher than
         either blob's post-erosion size -- must NOT be treated as a candidate (this is
-        exactly the real calibration mistake documented in research_log.md section 15:
+        exactly a real calibration mistake hit during development:
         erosion_radius=2 eroded whole sheets away and found zero candidates)."""
         mask = _two_blobs_thin_bridge(blob_size=4)
         cfg = UnmergeConfig(erosion_radius=1, min_seed_size=10_000, min_piece_size=1)

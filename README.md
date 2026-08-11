@@ -2,8 +2,7 @@
 
 3D segmentation of papyrus sheet surfaces in micro-CT scans of carbonized, rolled scrolls
 (the [Vesuvius Challenge Surface Detection](https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection)
-Kaggle competition), nnU-Net-based. See `experiment_summary.md` for the full, numbered
-history of every experiment, and `research_log.md` for the narrative decision log.
+Kaggle competition), nnU-Net-based.
 
 ## Results
 
@@ -75,7 +74,9 @@ both public and private (consistent with more training data helping overall: A2 
 
 ## Quickstart
 
-Two conda environments, deliberately kept separate (see `docs/reproducibility_notes.md` for a numpy/scipy conflict):
+Two conda environments, deliberately kept separate (the eval env pins an older numpy/scipy
+to match the organizers' compiled metric extension, which would ABI-conflict with torch if
+shared):
 
 ```bash
 # Training / inference / postprocessing
@@ -226,7 +227,7 @@ tensors) stay trainable, so the domain-specific "body anatomy" semantics STU-Net
 learned get relearned for thin-sheet detection:
 
 ```bash
-# weights: HuggingFace ziyanhuang/STU-Net -- see docs/checkpoints.md
+# weights: HuggingFace ziyanhuang/STU-Net
 python scripts/finetune/run_finetuning_stunet_freeze_early.py 100 3d_lowres 0 \
     -p nnUNetResEncUNetMPlans -tr STUNetTrainer_base_ft_30epochs \
     -pretrained_weights checkpoints/stunet_base.model
@@ -241,9 +242,9 @@ layers of the cascade model instead: the same skeleton-recall recipe from step 7
 just the final decoder stage and deep-supervision heads (0.07% of parameters).
 
 ```bash
-# arunodhayan/cascade-updated is a Kaggle Model, not a plain Dataset -- see
-# docs/checkpoints.md for the exact download step; download_weights.sh only wraps
-# `kaggle datasets download` and doesn't apply here.
+# arunodhayan/cascade-updated is a Kaggle Model, not a plain Dataset -- download via
+# `kaggle models instances versions download`, not `kaggle datasets download`
+# (download_weights.sh only wraps the latter, so it doesn't apply here).
 nnUNetv2_train 100 3d_cascade_fullres 0 -p nnUNetResEncUNetMPlans \
     -tr nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs \
     -pretrained_weights checkpoints/Cascade_fullres_checkpoint_best.pth
@@ -254,9 +255,9 @@ positive fine-tuning result.
 
 ### 10. 1st-place postprocessing, both lines
 
-A *different* team's technique (they placed 1st, not 3rd — see `docs/attribution.md`),
-reimplemented from their writeup: remove small components → per-sheet closing → height-map
-gap patching → hole plugging → global fill_holes.
+A *different* team's technique (they placed 1st, not 3rd — arunodhayan's own solution placed
+3rd), reimplemented from their writeup: remove small components → per-sheet closing →
+height-map gap patching → hole plugging → global fill_holes.
 
 ```bash
 conda activate vesuvius_eval
@@ -277,14 +278,12 @@ leaderboard split.
 
 ### 11. Metric-guided unmerge (novelty), both lines
 
-This project's own contribution, not from any public source (see `docs/attribution.md`) —
-`voi_merge` stays flat across the 1st-place chain because it never severs a bridge fused
-*between* two components. Independent confirmation this is a real, unsolved gap, not a
-strawman: the actual 1st-place team's own writeup states they "did not find an effective
-solution to the problem of touching sheets" and just relied on nnU-Net itself to minimize how
-often it happened — no postprocessing fix of their own. Method: erode each component, treat
-surviving multi-seed splits as merge candidates, cut via nearest-seed Voronoi tessellation,
-accept only if the metric improves.
+This project's own contribution, not from any public source — `voi_merge` stays flat across
+the 1st-place chain because it never severs a bridge fused *between* two components (the
+1st-place team's own writeup confirms they never solved touching sheets either, and just
+relied on nnU-Net itself to minimize it). Method: erode each component, treat surviving
+multi-seed splits as merge candidates, cut via nearest-seed Voronoi tessellation, accept only
+if the metric improves.
 
 ```bash
 python scripts/run_postprocess.py --method unmerge --workers 8 \
@@ -296,29 +295,20 @@ python scripts/run_postprocess.py --method unmerge --workers 8 \
     --output out/b4 --labels $VESUVIUS_DATA_ROOT/train_labels
 ```
 
-Candidate/accept counts: arunodhayan line — 25/129 candidate cuts, 19/129 accepted; our own
-line — 57/129 candidate cuts, 38/129 accepted. Net-neutral on both (see Results table): the
-accept gate only requires `delta >= 0.0` per volume, so accepted cuts are individually real
-but too small to move a 129-case mean. This corrects an earlier version of this section that
-predates a fix to a `voi_alpha` default bug in `evaluation.metric_adapter.score_pair` (was
-silently using the metric package's own `1.0` instead of the `0.3` every other reported number
-here uses — see that module's docstring for the full account).
-
-Net-neutral is a real, honest result, not a dead end — iterated further from here on the
-*opposite* failure mode next.
+Candidate/accept counts: arunodhayan line — 25/129 candidates, 19/129 accepted; our own line
+— 57/129 candidates, 38/129 accepted. Net-neutral on both (see Results table): the accept
+gate only requires `delta >= 0.0` per volume, so accepted cuts are individually real but too
+small to move a 129-case mean — a real, honest result, not a dead end. Iterated further from
+here on the *opposite* failure mode next.
 
 ### 12. Metric-guided fragment bridging (novelty, on top of pp — the other half of the merge/split gap)
 
 Unmerge (step 11) splits components wrongly fused together; nothing bridges components
-wrongly *split apart* — the exact failure step 6's failure-case analysis found ("our
-predicted sheet surfaces come out as visibly broken, discontinuous lines"). Method: pair
-each component's nearest surface point against every other component's (via `cKDTree`),
-accept a pair only if both sides' local surface orientation points back toward the other
-(rules out bridging unrelated nearby sheets — that's what unmerge's Voronoi cut targets
-instead), connect accepted pairs with a thin bridge, gate the whole volume the same way
-unmerge is gated. Grounded in real literature (vessel-reconnection endpoint-pairing
-techniques; a real top-10 solution in *this* competition independently used a heavier
-orientation-aware technique for the same purpose — see `docs/attribution.md`).
+wrongly *split apart* — the failure step 6 diagnosed. Method: pair each component's nearest
+surface point against every other component's (via `cKDTree`), accept a pair only if both
+sides' local surface orientation points back toward the other, connect accepted pairs with a
+thin bridge, gate the same way unmerge is gated. Informed by vessel-reconnection literature's
+endpoint-pairing technique, implemented independently.
 
 ```bash
 python scripts/run_postprocess.py --method bridge --workers 8 \
@@ -331,19 +321,13 @@ python scripts/run_postprocess.py --method bridge --workers 8 \
 ```
 
 Applied on top of the already-deployed, unconditional 1st-place pp output (not an
-oracle-gated intermediate — see `docs/decisions.md` decision 21 for a real methodology bug
-caught and fixed while validating this): our line **0.5683 → 0.5691 (+0.0009)**, full
-129-case LOSO, 32/129 accepted. Standalone (no pp): 0.5671 → 0.5682 (+0.0011), 40/129
-accepted, mean accepted-case gain +0.0035 vs. mean rejected-case would-be loss -0.0083 — a
-real, well-behaved signal. Applied unconditionally (no gate) is a net negative either way;
-the gate is doing real work, not formality.
+oracle-gated intermediate): our line **0.5683 → 0.5691 (+0.0009)**, full 129-case LOSO,
+32/129 accepted. Standalone (no pp): 0.5671 → 0.5682 (+0.0011), 40/129 accepted.
 
 arunodhayan line: 129/129 cases have candidate bridges, but only 1/129 accepted — net
 0.7363 → 0.7363 (+0.0000), same net-neutral shape as unmerge on this line. Not a
 contradiction: this line's control predictions already have far less fragmentation
-(`voi_split` 0.85 vs. our own line's 1.4-1.9), so there's little for this specific
-technique to fix — it targets exactly the failure mode step 6 diagnosed on our own line,
-and correctly finds little of it on the other.
+(`voi_split` 0.85 vs. our own line's 1.4-1.9), so there's little for this technique to fix.
 
 ## Repo map
 
@@ -353,16 +337,9 @@ packages/vesuvius_evaluation/   the official scorer, its own installable package
 scripts/                  CLI entrypoints: data prep, training, inference, evaluation, downloads
 notebooks/                EDA, failure-case analysis, real Kaggle submission notebooks
 tests/                    unit/ (CI, no GPU/data needed) and functional/ (manual, needs both)
-docs/                     attribution, reproducibility gaps, checkpoints, dataset schema, metric
+docs/                     metric notes, dataset download instructions
 configs/                  nnU-Net plan overrides, fine-tune config
 ```
-
-`experiment_summary.md` and `research_log.md` are the two narrative documents — start there for
-the full story; this README covers setup and reproduction mechanics.
-
-## Known limitations
-
-Full list with detail in `docs/reproducibility_notes.md`.
 
 ## Packaging notes
 
@@ -380,37 +357,10 @@ LOSO-split leakage checks, the seeding utility, parallel-vs-sequential scoring d
 in CI, no GPU/dataset needed. `tests/functional/` needs real data/checkpoints
 (`VESUVIUS_DATA_ROOT`, `VESUVIUS_TEST_CHECKPOINT_DIR`) and is manual-only. Real training,
 scoring, and Kaggle submissions are GPU/hours/account-scale and stay manual —
-`docs/reproducibility_notes.md` says which reported numbers came from which tier.
-
-## Sources & attribution
-
-Every public dataset, checkpoint, and technique this repo builds on is cited individually in
-`docs/attribution.md` — including a correction worth repeating here: **arunodhayan's public
-solution placed 3rd, not 1st.** The 1st-place postprocessing chain (`first_place.py`) is
-reimplemented from a different team's writeup entirely.
-
-## Use of AI
-
-Claude Code (Anthropic) was used throughout this project's development, under direct human
-direction, not as an autonomous decision-maker:
-
-- **Code**: implementing human-specified designs (e.g. "freeze all but the final decoder stage
-  and deep-supervision heads" was a human-directed experiment; Claude wrote the trainer
-  subclass), debugging real errors (a Kaggle mount-path inconsistency, a namespace collision,
-  an OOM from over-parallelized scoring), and this repo's consolidation pass.
-- **Research**: reading public writeups to identify techniques worth trying (the 1st-place
-  postprocessing steps; arunodhayan's loss/optimizer recipe, verified against his own source),
-  and checking real bugs (e.g. confirming a checkpoint's `fold='all'` metadata directly rather
-  than trusting a README's claim).
-- **Text**: drafting documentation (this README, `docs/`, `experiment_summary.md`) from
-  experiment results and decisions already made.
-
-Every non-obvious decision traces to a human instruction or checkable evidence (a source-code
-read, a measured number, a real error message) — not an unexplained AI choice. The human
-redirected Claude's proposed directions multiple times over the project when they looked wrong
-(see `presentation_notes.md`'s `[PUSHBACK]`-tagged entries for the real record).
+Real training, scoring, and Kaggle submissions are GPU/hours/account-scale and stay manual.
 
 ## License
 
-MIT for original code in this repository — see `LICENSE`. Checkpoints referenced in
-`docs/checkpoints.md` remain under their own original terms.
+MIT for original code in this repository — see `LICENSE`. Externally sourced checkpoints
+(arunodhayan's, `surface_m7_nnunet`, STU-Net) remain under their own original terms, not
+this repo's license.

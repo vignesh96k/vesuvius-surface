@@ -5,7 +5,7 @@ Stock nnU-Net sets no random seed anywhere: `nnUNetTrainer.__init__` has no seed
 and `nnUNetv2_train` has no `--seed` flag (confirmed by reading
 nnunetv2/training/nnUNetTrainer/nnUNetTrainer.py and nnunetv2/run/run_training.py directly,
 nnunetv2==2.8.1). This is the only RNG-seeding fix anywhere in the project -- every
-from-scratch baseline result in experiment_summary.md traces back to this function.
+from-scratch baseline result in this project traces back to this function.
 """
 
 from __future__ import annotations

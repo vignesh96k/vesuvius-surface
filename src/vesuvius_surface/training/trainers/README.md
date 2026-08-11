@@ -2,20 +2,19 @@
 
 Every class here is an `nnUNetTrainer` subclass, registered via `scripts/register_nnunet_trainers.py`
 and run via `nnUNetv2_train ... -tr <ClassName>` (or `src/vesuvius_surface/training/run_training.py`
-directly). This table maps each one to the numbered experiment it produced in
-`experiment_summary.md` (phases/items refer to that file), so a result number can always be traced
-back to the exact trainer that produced it.
+directly). This table maps each one to the experiment it produced, so a result number can
+always be traced back to the exact trainer that produced it.
 
 | Class | Experiment | Result |
 |---|---|---|
-| `nnUNetTrainerSkeletonRecall` (base) | Stage 1 loss definition (research_log.md §13) — DC+CE + skeleton-recall auxiliary loss, ported from MIC-DKFZ/Skeleton-Recall (Kirchhoff et al., ECCV 2024) | — |
-| `nnUNetTrainerSkeletonRecall_100epochs` | Phase 3, item 11 — 100-epoch 5-way candidate comparison | **winner**, 0.5307 |
-| `nnUNetTrainerSkeletonRecall_20epochs` | Phase 3, item 13 — diagnostic isolating the arunodhayan-finetune regression's cause (raw CT, no highpass/affinity) | 0.5768 |
-| `nnUNetTrainerSkeletonRecall_700epochs` | Phase 4, item 15 — from-scratch winner-extension of the Phase 3 winner | 0.5671 (LOSO), real Kaggle submission (see docs/checkpoints.md) |
-| `nnUNetTrainerAffinity` (base) | Stage 2a auxiliary-head definition (research_log.md §13) — long-range affinity head on the full-resolution decoder stage, discarded at inference | — |
-| `nnUNetTrainerAffinity_100epochs` | Phase 3, item 11 — 100-epoch 5-way candidate comparison | 0.5226 (lost to skeleton-recall) |
+| `nnUNetTrainerSkeletonRecall` (base) | Stage 1 loss definition — DC+CE + skeleton-recall auxiliary loss, ported from MIC-DKFZ/Skeleton-Recall (Kirchhoff et al., ECCV 2024) | — |
+| `nnUNetTrainerSkeletonRecall_100epochs` | 100-epoch 5-way candidate comparison | **winner**, 0.5307 |
+| `nnUNetTrainerSkeletonRecall_20epochs` | Diagnostic isolating the arunodhayan-finetune regression's cause (raw CT, no highpass/affinity) | 0.5768 |
+| `nnUNetTrainerSkeletonRecall_700epochs` | From-scratch winner-extension of the 100-epoch winner | 0.5671 (LOSO), real Kaggle submission |
+| `nnUNetTrainerAffinity` (base) | Stage 2a auxiliary-head definition — long-range affinity head on the full-resolution decoder stage, discarded at inference | — |
+| `nnUNetTrainerAffinity_100epochs` | 100-epoch 5-way candidate comparison | 0.5226 (lost to skeleton-recall) |
 | `nnUNetTrainerAffinity_700epochs` | Prepared as the winner-extension trainer *if* affinity had won the 100-epoch comparison (per its own docstring: "if it wins the decision point") | **not run** — affinity lost (0.5226 vs 0.5307) |
-| `nnUNetTrainerSkeletonRecallAffinity` | Combined Stage 1 + Stage 2a, Track A design (research_log.md §13's "two tracks" table) — from-scratch combination. Also the *same* trainer class used for the full arunodhayan fine-tune (Phase 3, item 12): confirmed directly from the real checkpoints' own embedded `trainer_name` metadata, not assumed. That fine-tune adds a highpass input channel (`scripts/data_prep/highpass.py`) via a separate preprocessed dataset (`Dataset102_VesuviusSurfaceHighpassOnly`) and `-pretrained_weights`, rather than anything in this class itself. | exploratory (from-scratch use); Phase 3, item 12 (fine-tune use, negative: ensemble 0.7029→0.5172, cascade 0.7198→0.5208) — see research_log.md §13 for the from-scratch design rationale |
+| `nnUNetTrainerSkeletonRecallAffinity` | Combined Stage 1 + Stage 2a, Track A design — from-scratch combination. Also the *same* trainer class used for the full arunodhayan fine-tune: confirmed directly from the real checkpoints' own embedded `trainer_name` metadata, not assumed. That fine-tune adds a highpass input channel (`scripts/data_prep/highpass.py`) via a separate preprocessed dataset (`Dataset102_VesuviusSurfaceHighpassOnly`) and `-pretrained_weights`, rather than anything in this class itself. | exploratory (from-scratch use); fine-tune use, negative: ensemble 0.7029→0.5172, cascade 0.7198→0.5208 |
 | `nnUNetTrainerSkeletonRecallAffinity_1epoch` | Smoke test for the combined trainer above (forward/backward/checkpoint sanity only) | not a real result |
 | `nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs` | Phase 4, item 14 — last-layers-only (0.07% of params trainable) fine-tune of arunodhayan's real cascade checkpoint. **The one genuinely positive fine-tuning result of the whole project.** | 0.7248 vs 0.7198 zero-shot (+0.0050), full 129-case LOSO |
 | `nnUNetTrainerSkeletonRecallCascadeLastLayers_1epoch` | Smoke test for the trainer above (verifies the frozen-backbone + cascade + skeleton-recall combination actually trains before committing to the real 10-epoch run) | not a real result |
@@ -25,10 +24,8 @@ back to the exact trainer that produced it.
 | `STUNetTrainer` (base, vendored from `baselinerun/`) | STU-Net (TotalSegmentator-pretrained, architecturally distinct from nnU-Net's own CNN) fine-tuning family — chosen specifically because it's provably leak-free (never seen a Vesuvius volume), unlike fine-tuning arunodhayan's or m7's checkpoints. Contains a real upstream bug fix (wrong positional-arg order) documented in-file. | — |
 | `STUNetTrainer_base_ft_30epochs` | Phase 3, item 10 — 30-epoch fine-tune of STU-Net-B (58M params). The two shallowest encoder stages (`conv_blocks_context.0`, `.1`) are frozen at load time by `scripts/finetune/run_finetuning_stunet_freeze_early.py`, which wraps `nnUNetv2_train`'s own `-pretrained_weights` loading — the freezing is not in this class itself. | **negative**, 0.4629 vs. 0.5575 best_baseline (n=129 full LOSO); ruled out |
 
-`nnUNetTrainerSeeded`/`STUNetTrainer`/their variants above were vendored from `baselinerun/`
-(a separate, previously-uncommitted project directory with its own from-scratch training
-pipeline — see `research_log.md` for how the two projects' work was merged). The arunodhayan
-full cascade fine-tune (Phase 3, item 12 — the other negative full-fine-tune result) reuses
-`nnUNetTrainerSkeletonRecallAffinity` above via `-pretrained_weights`, not a separate trainer
-class — see `docs/reproducibility_notes.md` for the real commands and how the trainer
-attribution was confirmed (a real checkpoint's own embedded metadata, not assumed).
+`nnUNetTrainerSeeded`/`STUNetTrainer`/their variants above were vendored from `baselinerun/`,
+a separate from-scratch training pipeline. The arunodhayan full cascade fine-tune (the other
+negative full-fine-tune result) reuses `nnUNetTrainerSkeletonRecallAffinity` above via
+`-pretrained_weights`, not a separate trainer class — trainer attribution was confirmed from
+a real checkpoint's own embedded metadata, not assumed.

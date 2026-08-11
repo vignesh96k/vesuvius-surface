@@ -2,9 +2,8 @@
 produce the exact same CaseScore records as the workers=1 (original, sequential) path.
 
 Mocks score_pair rather than calling the real official metric -- that package
-(topometrics) lives only in the eval conda env, not this repo's CI env (see
-docs/reproducibility_notes.md, "why two conda environments"), so tests/unit/ can't depend
-on it. The workers>1 code path was additionally verified against the real metric on real
+(topometrics) lives only in the eval conda env, not this repo's CI env, so tests/unit/
+can't depend on it. The workers>1 code path was additionally verified against the real metric on real
 data manually (bit-identical results, sequential vs. 4-way parallel, before it replaced
 the sequential run on a live scoring job) -- this test locks in that the *dispatch* logic
 (splitting work across a Pool, writing results back in the main process) doesn't silently

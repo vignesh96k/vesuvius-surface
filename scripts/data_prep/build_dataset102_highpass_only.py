@@ -5,8 +5,8 @@ input channel -- no raw CT channel at all. Tests whether the network needs absol
 intensity information, or whether edge/texture structure alone is sufficient. Labels
 symlinked from the same original source as everything else.
 
-This is experiment_summary.md Phase 3 item 11's "highpassonly" candidate in the 100-epoch
-5-way loss/input comparison (real result: 0.5204, lost to skeleton-recall's 0.5307). Run
+This is the "highpassonly" candidate in the 100-epoch 5-way loss/input comparison (real
+result: 0.5204, lost to skeleton-recall's 0.5307). Run
 build_dataset101_laplacian.py first -- this script reuses its channel-1 output directly
 rather than recomputing it. Preprocessing/training steps and the LOSO-split-copy step are
 the same as build_dataset101_laplacian.py's docstring, substituting dataset id 102 and

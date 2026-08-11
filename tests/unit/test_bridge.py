@@ -1,7 +1,7 @@
 """Unit tests for the metric-guided fragment-bridging novelty layer's pure geometry logic
 (propose_bridges and its helpers) -- no GPU, no dataset, no metric package needed.
 
-This project's other novel contribution alongside unmerge (see docs/attribution.md and
+This project's other novel contribution alongside unmerge (see
 postprocess/bridge.py's module docstring) -- addresses the opposite failure mode (components
 wrongly split apart, not wrongly fused together). Same testing approach as
 tests/unit/test_unmerge.py: exercise the actual candidate-detection/bridging logic directly on

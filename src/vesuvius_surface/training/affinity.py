@@ -72,7 +72,7 @@ NEAREST_NEIGHBOUR_OFFSETS: Tuple[Offset, ...] = (
 
 #: Long-range offsets on a geometric ladder 2, 4, 8, 16 along each axis.
 #:
-#: The ladder is chosen from measurements in research_log.md rather than copied
+#: The ladder is chosen from measurements on this project's own data rather than copied
 #: from SNEMI3D. Median papyrus sheet thickness is 2 voxels, so an offset of 2
 #: straddles a single sheet; 4 to 16 spans the gap to a neighbouring wrap, and
 #: those are the pairs that must be predicted 0 for the network to learn that

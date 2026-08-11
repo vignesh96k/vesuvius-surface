@@ -11,7 +11,7 @@ parameters, on the stated theory that the package's own defaults already matched
 leaderboard. That was never checked against what `scripts/evaluation/score_model.py` (and
 every one-off scoring script that produced this project's actual reported numbers) explicitly
 passes. They differ on exactly one parameter: the package's own default is `voi_alpha=1.0`;
-every real reported number in `experiment_summary.md` was computed with `voi_alpha=0.3`.
+every real reported number in this project was computed with `voi_alpha=0.3`.
 Verified directly: scoring the same real case both ways gives score=0.5204 (alpha=1.0,
 this module's old behavior) vs. score=0.6182 (alpha=0.3, matches the number already on
 record for that exact case in a prior scoring run). Since `apply_unmerge` in

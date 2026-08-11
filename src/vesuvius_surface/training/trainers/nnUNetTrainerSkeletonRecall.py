@@ -24,13 +24,13 @@ concrete problem is that it binarises with ``seg > 0``, which for us folds the
 
 Why this loss for this competition
 ----------------------------------
-research_log.md §6: SurfaceDice is at 0.985 and contributes 0.3448 of a possible
+Measured directly on the 100-epoch baseline: SurfaceDice is at 0.985 and contributes 0.3448 of a possible
 0.35, while VOI sits at 0.323 and TopoScore at 0.437. Essentially all remaining
 headroom is topological, and a sheet riddled with pinholes still scores near
 perfectly on position. Skeleton recall penalises exactly the breaks that
 volumetric Dice is indifferent to.
 
-Nothing here has been executed. See the bottom of research_log.md.
+Nothing here has been executed.
 """
 
 from __future__ import annotations
@@ -217,7 +217,7 @@ class nnUNetTrainerSkeletonRecall_notube(nnUNetTrainerSkeletonRecall):  # noqa: 
     """Ablation: skeleton without the 2-voxel tube.
 
     Worth running once. Median sheet thickness here is 2 voxels
-    (research_log.md §2), so the tube is roughly as wide as the structure it is
+    (measured directly via 3D distance transform), so the tube is roughly as wide as the structure it is
     supposed to be a thin proxy for, and the tubed target may be close to the
     plain foreground mask.
     """

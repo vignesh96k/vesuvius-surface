@@ -5,7 +5,7 @@ this project's real experiments (score_1000ep_loso.py, score_a2_700ep_skelrecall
 score_a3_skelrecall_pp.py, score_b3_lastlayers_pp.py, score_single_model.py -- their original
 forms are preserved in git history) into one parametrized tool.
 
-Every real comparison table in experiment_summary.md was produced by a script matching this
+Every real comparison table in this project was produced by a script matching this
 one's shape. Usage:
 
     # Score a single condition (accepts .tif segmentation or .npz probability files):
@@ -74,7 +74,7 @@ def _score_unit(args: tuple) -> tuple:
     if leaderboard is None:
         raise RuntimeError(
             "topometrics not importable -- activate the vesuvius_eval env and install "
-            "packages/vesuvius_evaluation first (see docs/checkpoints.md / environment-eval.yml)"
+            "packages/vesuvius_evaluation first (see environment-eval.yml)"
         )
     r = leaderboard.compute_leaderboard_score(
         predictions=pred, labels=gt,
@@ -104,7 +104,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--splits-file", type=Path, default=None, help="nnU-Net splits_final.json, to restrict to one fold's held-out cases")
     parser.add_argument("--fold", type=int, default=0)
-    parser.add_argument("--workers", type=int, default=8, help="8 is the proven-safe ceiling on a 117GB box for this metric's memory use -- see docs/reproducibility_notes.md")
+    parser.add_argument("--workers", type=int, default=8, help="8 is the proven-safe ceiling on a 117GB box for this metric's memory use")
     parser.add_argument("--out", type=Path, default=None, help="pickle path for raw per-case results (default: alongside the first --pred-dir)")
     return parser.parse_args()
 

@@ -14,7 +14,7 @@ disclosed, minor methodological difference, not a silent one.
 Segmentation labels are byte-identical between Dataset100 and Dataset102 fullres (same case,
 same crop, same resampling), so they're reused directly rather than recomputed.
 
-This is the real code behind experiment_summary.md Phase 3 item 12's "highpass input" for the
+This is the real code behind the "highpass input" for the
 full arunodhayan fine-tune (ensemble: 0.7029 -> 0.5172; cascade: 0.7198 -> 0.5208) -- run this
 before fine-tuning `nnUNetTrainerSkeletonRecallAffinity` on either checkpoint with
 `-p nnUNetResEncUNetMPlans -c 3d_fullres` (ensemble) or `-c 3d_cascade_fullres` (cascade). Run

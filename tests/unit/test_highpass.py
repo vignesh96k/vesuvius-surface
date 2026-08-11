@@ -1,5 +1,5 @@
 """Unit test for scripts/data_prep/highpass.py -- the Laplacian high-pass sub-band function
-behind experiment_summary.md Phase 3 item 11's "laplacian" and "highpassonly" candidates.
+behind the 100-epoch 5-way comparison's "laplacian" and "highpassonly" candidates.
 
 Verified separately (not just here) against the real, already-computed channel-1 data from
 the original Dataset101_VesuviusSurfaceLaplacian run: exact byte-for-byte match. This test

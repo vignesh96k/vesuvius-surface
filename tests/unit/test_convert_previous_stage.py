@@ -4,7 +4,7 @@
 Covers the two hard-won, non-obvious details documented in that script's own docstring:
 cropping to match the preprocessed GT's bbox exactly, and never adding an explicit channel
 dimension (nnU-Net's own data loader adds one; a real bug this project hit -- see
-research_log.md section 15 / the script's own docstring).
+the script's own docstring).
 """
 from __future__ import annotations
 

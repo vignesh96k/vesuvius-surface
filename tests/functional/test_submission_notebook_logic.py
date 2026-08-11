@@ -15,7 +15,7 @@ import numpy as np
 import tifffile
 from tqdm.auto import tqdm
 
-# ---- local stand-ins for Kaggle paths (env vars, see docs/data.md / docs/checkpoints.md) ----
+# ---- local stand-ins for Kaggle paths (env vars, see docs/data.md) ----
 INPUT_DIR = Path(os.environ["VESUVIUS_DATA_ROOT"])
 CHECKPOINT_DIR = Path(os.environ["VESUVIUS_TEST_CHECKPOINT_DIR"])
 WORKING_DIR = Path("/tmp/vesuvius_submission_notebook_test")

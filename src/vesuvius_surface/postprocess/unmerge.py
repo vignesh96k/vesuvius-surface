@@ -7,7 +7,7 @@ cut-set only if the OFFICIAL competition metric improves on that volume. This mo
 reimplements the metric -- it calls straight into `evaluation.metric_adapter.score_pair`, the
 same function the evaluation harness uses.
 
-Motivation (see research_log.md sections 8 and 14): the 1st-place control chain repairs holes
+Motivation: the 1st-place control chain repairs holes
 *inside* components (closing / height-map patch / hole plug / fill) but never severs a bridge
 fused between two sheets -- it is merge-blind by construction, and the recorded ablation on
 scroll 35360's holdout cases confirms it: voi_merge sits at 1.1230 (raw) through 1.1251 (fill)
@@ -83,7 +83,7 @@ class UnmergeConfig:
     candidates across 5 real cases); ``erosion_radius=1`` is the largest radius
     that still leaves real sheet material as seeds while still stripping
     sub-voxel-scale bridges, and finds real candidates -- 9 in a case from
-    scroll 35360, the exact scroll research_log.md flags for merge skew.
+    scroll 35360, the scroll with this project's worst measured merge skew.
     ``min_score_delta=0.0`` means a cut is accepted on any non-negative
     improvement; raise it to require a real margin before keeping a cut."""
 

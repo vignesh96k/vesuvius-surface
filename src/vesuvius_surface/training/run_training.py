@@ -8,7 +8,7 @@ top-level `training` module, which shared its name with nnunetv2's own internal
 bare `import training` to the wrong one depending on import order. Renaming this package to
 `vesuvius_surface.training` (this file's own location) makes that collision structurally
 impossible -- `vesuvius_surface.training` cannot be confused with `nnunetv2.training` -- so
-the workaround itself is gone, not just better-documented. See docs/reproducibility_notes.md.
+the workaround itself is gone, not just better-documented.
 
 This file now only exists as a convenience for invoking nnU-Net's real training entry point
 without a prior `pip install -e .` (it puts `src/` on `sys.path` first). If this package is

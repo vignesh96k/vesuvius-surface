@@ -27,4 +27,4 @@ if [[ -f "$ZIP" ]]; then
   rm "$ZIP"
 fi
 
-echo "Done. See docs/dataset_schema.md for the expected layout."
+echo "Done. See docs/data.md for the expected layout."

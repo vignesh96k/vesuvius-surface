@@ -71,7 +71,7 @@ def main() -> int:
 
     cascade_ckpt = Path(pretrained["cascade_checkpoint"])
     if not cascade_ckpt.exists():
-        print(f"ERROR: {cascade_ckpt} not found. See docs/checkpoints.md for download instructions.")
+        print(f"ERROR: {cascade_ckpt} not found. Download arunodhayan/cascade-updated from Kaggle Models first.")
         return 1
 
     cmd_preview = (
