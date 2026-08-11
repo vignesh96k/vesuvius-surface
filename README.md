@@ -49,6 +49,15 @@ consistent with more training data helping overall. Within the fold=all pair its
 pp raises public (+0.0044) but costs a small amount of private (-0.0014) — the same
 public-up/private-mixed pattern already seen with A2→A3, not a one-off.
 
+Checked against the frozen final leaderboard (post-deadline, not an official rank): no-pp
+places **#674/1392 public (top 48.4%) / #122/1392 private (top 8.8%)**; +pp places
+**#345/1392 public (top 24.8%) / #126/1392 private (top 9.1%)**. Both show the same notable
+pattern — private rank far stronger than public (top ~9% vs. top 25-48%), the good direction
+to be lopsided in (generalizing to the held-out final scoring better than to the public
+preview split, not overfitting to it). pp moves the public rank up a lot (#674→#345) while
+the private rank barely moves (#122→#126), matching the public-up/private-mixed pattern
+above.
+
 ## Quickstart
 
 Two conda environments, deliberately kept separate (see `docs/reproducibility_notes.md` for a numpy/scipy conflict):
