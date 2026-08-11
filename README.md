@@ -7,10 +7,38 @@ history of every experiment, and `research_log.md` for the narrative decision lo
 
 ## Results
 
-Two parallel tracks, each escalated through the same four stages — baseline/zero-shot →
-add skeleton-recall → add 1st-place postprocessing → add a novelty layer on top. Track A adds
-a fifth stage: a second, independent novelty layer (fragment bridging) also tried on top of
-pp — not stacked with unmerge, each tested separately against the same A3 baseline:
+**Top real Kaggle leaderboard result.** The final, full-data submission — Track A
+(skeleton-recall, 700 epochs), trained on all 786 cases (`fold=all`, no held-out split, so no
+local LOSO number is possible for it by construction) — checked against the frozen final
+leaderboard (post-deadline, not an official rank):
+
+| Submission | Public | Private | Public rank | Private rank |
+|---|---:|---:|---:|---:|
+| `fold=all`, no postprocessing | 0.54920 | **0.57991** | #674 / 1392 (top 48.4%) | **#122 / 1392 (top 8.8%)** |
+| `fold=all`, + 1st-place postprocessing | 0.55360 | 0.57854 | #345 / 1392 (top 24.8%) | #126 / 1392 (top 9.1%) |
+
+Private rank is far stronger than public in both rows (top ~9% vs. top 25-48%) — the good
+direction to be lopsided in (generalizing to the held-out final scoring better than to the
+public preview split, not overfitting to it). Adding 1st-place pp moves the public rank up a
+lot (#674→#345) while the private rank barely moves (#122→#126), the same public-up/
+private-mixed pattern the local-LOSO ablations below already predicted before either
+submission was made.
+
+*(Track B's fine-tuned-checkpoint line scores higher in raw Kaggle points — 0.62410 private,
+row B1 below — but that submission fine-tunes arunodhayan's public checkpoint rather than
+this project's own from-scratch model, and was never itself checked against the frozen
+leaderboard. The table above is specifically Track A's own, fully-trained-from-scratch
+result.)*
+
+### Local LOSO experimentation trail
+
+The leaderboard result above is the end point of the experimentation below — every stage
+benchmarked first against this project's own held-out validation split (scroll 26010, 129
+cases) with the real leaderboard-equivalent metric, before any Kaggle submission was made.
+Two parallel tracks, each escalated through the same four stages — baseline/zero-shot → add
+skeleton-recall → add 1st-place postprocessing → add a novelty layer on top. Track A adds a
+fifth stage: a second, independent novelty layer (fragment bridging) also tried on top of pp
+— not stacked with unmerge, each tested separately against the same A3 baseline:
 
 | # | Track A — our own from-scratch line | Local LOSO (129 held-out) | Real Kaggle |
 |---|---|---:|---:|
@@ -39,24 +67,11 @@ fragmentation to fix (`voi_split` 0.85 vs. Track A's 1.4-1.9), so there's little
 specific technique to do there. Bridging helps where the diagnosed problem (step 6) is
 present, and correctly does ~nothing where it isn't.
 
-**Final-submission variant**: the A2/A3 skeleton-recall-700ep model above is `fold_0` (trained
-on 657 of 786 cases, scroll 26010 held out for LOSO validation). A separate run of the exact
-same recipe on `fold=all` (all 786 cases, no held-out split — real submission only, no local
-LOSO number is possible for it by construction) scored **0.54920 public / 0.57991 private**
-without postprocessing and **0.55360 public / 0.57854 private** with 1st-place pp — both
-higher than the fold_0 model's equivalents (A2: 0.54454/0.55773; A3: 0.54063/0.56231),
-consistent with more training data helping overall. Within the fold=all pair itself, adding
-pp raises public (+0.0044) but costs a small amount of private (-0.0014) — the same
-public-up/private-mixed pattern already seen with A2→A3, not a one-off.
-
-Checked against the frozen final leaderboard (post-deadline, not an official rank): no-pp
-places **#674/1392 public (top 48.4%) / #122/1392 private (top 8.8%)**; +pp places
-**#345/1392 public (top 24.8%) / #126/1392 private (top 9.1%)**. Both show the same notable
-pattern — private rank far stronger than public (top ~9% vs. top 25-48%), the good direction
-to be lopsided in (generalizing to the held-out final scoring better than to the public
-preview split, not overfitting to it). pp moves the public rank up a lot (#674→#345) while
-the private rank barely moves (#122→#126), matching the public-up/private-mixed pattern
-above.
+The A2/A3 skeleton-recall-700ep rows above are `fold_0` (trained on 657 of 786 cases, scroll
+26010 held out for LOSO validation) — the fold=all leaderboard submissions at the top of this
+section are a separate run of the exact same recipe on all 786 cases, and score higher on
+both public and private (consistent with more training data helping overall: A2 0.54454/
+0.55773 → fold=all no-pp 0.54920/0.57991; A3 0.54063/0.56231 → fold=all +pp 0.55360/0.57854).
 
 ## Quickstart
 
