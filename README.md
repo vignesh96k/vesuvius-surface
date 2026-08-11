@@ -43,9 +43,11 @@ present, and correctly does ~nothing where it isn't.
 on 657 of 786 cases, scroll 26010 held out for LOSO validation). A separate run of the exact
 same recipe on `fold=all` (all 786 cases, no held-out split — real submission only, no local
 LOSO number is possible for it by construction) scored **0.54920 public / 0.57991 private**
-without postprocessing — both public and private higher than the fold_0 model's equivalent
-(A2: 0.54454/0.55773), consistent with more training data helping. The +1st-place-pp variant
-of this fold=all model was submitted alongside it and is still pending.
+without postprocessing and **0.55360 public / 0.57854 private** with 1st-place pp — both
+higher than the fold_0 model's equivalents (A2: 0.54454/0.55773; A3: 0.54063/0.56231),
+consistent with more training data helping overall. Within the fold=all pair itself, adding
+pp raises public (+0.0044) but costs a small amount of private (-0.0014) — the same
+public-up/private-mixed pattern already seen with A2→A3, not a one-off.
 
 ## Quickstart
 
