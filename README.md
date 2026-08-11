@@ -272,12 +272,11 @@ leaderboard split.
 
 ### 11. Metric-guided unmerge (novelty), both lines
 
-This project's own contribution, not from any public source — `voi_merge` stays flat across
-the 1st-place chain because it never severs a bridge fused *between* two components (the
-1st-place team's own writeup confirms they never solved touching sheets either, and just
-relied on nnU-Net itself to minimize it). Method: erode each component, treat surviving
-multi-seed splits as merge candidates, cut via nearest-seed Voronoi tessellation, accept only
-if the metric improves.
+`voi_merge` stays flat across the 1st-place chain because it never severs a bridge fused
+*between* two components (the 1st-place team's own writeup confirms they never solved
+touching sheets either, and just relied on nnU-Net itself to minimize it). Method: erode
+each component, treat surviving multi-seed splits as merge candidates, cut via nearest-seed
+Voronoi tessellation, accept only if the metric improves.
 
 ```bash
 python scripts/run_postprocess.py --method unmerge --workers 8 \
