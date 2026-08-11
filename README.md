@@ -264,9 +264,12 @@ leaderboard split.
 
 This project's own contribution, not from any public source (see `docs/attribution.md`) —
 `voi_merge` stays flat across the 1st-place chain because it never severs a bridge fused
-*between* two components. Method: erode each component, treat surviving multi-seed splits as
-merge candidates, cut via nearest-seed Voronoi tessellation, accept only if the metric
-improves.
+*between* two components. Independent confirmation this is a real, unsolved gap, not a
+strawman: the actual 1st-place team's own writeup states they "did not find an effective
+solution to the problem of touching sheets" and just relied on nnU-Net itself to minimize how
+often it happened — no postprocessing fix of their own. Method: erode each component, treat
+surviving multi-seed splits as merge candidates, cut via nearest-seed Voronoi tessellation,
+accept only if the metric improves.
 
 ```bash
 python scripts/run_postprocess.py --method unmerge --workers 8 \
@@ -285,6 +288,9 @@ but too small to move a 129-case mean. This corrects an earlier version of this 
 predates a fix to a `voi_alpha` default bug in `evaluation.metric_adapter.score_pair` (was
 silently using the metric package's own `1.0` instead of the `0.3` every other reported number
 here uses — see that module's docstring for the full account).
+
+Net-neutral is a real, honest result, not a dead end — iterated further from here on the
+*opposite* failure mode next.
 
 ### 12. Metric-guided fragment bridging (novelty, on top of pp — the other half of the merge/split gap)
 
