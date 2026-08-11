@@ -26,13 +26,18 @@ pp — not stacked with unmerge, each tested separately against the same A3 base
 | B2 | + skeleton-recall last-layers fine-tune | 0.7248 | — |
 | B3 | + 1st-place postprocessing | 0.7363 | 0.59733 public / 0.62253 private |
 | B4 | + unmerge novelty | 0.7363 (net-neutral) | — |
+| B5 | + fragment bridging novelty (on B3) | 0.7363 (net-neutral) | — |
 
 "Local LOSO" is this project's own scroll-grouped held-out validation (scroll 26010, 129
 cases), scored with the real leaderboard-equivalent metric. "Net-neutral" (A4/B4): the unmerge
 layer passes real per-volume accept gates on both lines (19/129 and 38/129 respectively), but
 the aggregate score across all 129 cases is unchanged to full float precision on both. A5's
-fragment-bridging layer (Track A only so far) is a real, non-negative gain by construction
-(32/129 accepted) — see step 12.
+fragment-bridging layer gives a real, non-negative gain on Track A (32/129 accepted) — see
+step 12. On Track B (B5), candidates exist in all 129 cases but only 1 is accepted, netting to
+0.0000 — consistent, not contradictory: Track B's control predictions already have far less
+fragmentation to fix (`voi_split` 0.85 vs. Track A's 1.4-1.9), so there's little for this
+specific technique to do there. Bridging helps where the diagnosed problem (step 6) is
+present, and correctly does ~nothing where it isn't.
 
 **Final-submission variant**: the A2/A3 skeleton-recall-700ep model above is `fold_0` (trained
 on 657 of 786 cases, scroll 26010 held out for LOSO validation). A separate run of the exact
@@ -287,15 +292,26 @@ orientation-aware technique for the same purpose — see `docs/attribution.md`).
 python scripts/run_postprocess.py --method bridge --workers 8 \
     --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecall_700epochs__nnUNetResEncUNetMPlans__3d_lowres/fold_0/validation \
     --output out/a5 --labels $VESUVIUS_DATA_ROOT/train_labels
+
+python scripts/run_postprocess.py --method bridge --workers 8 \
+    --predictions $nnUNet_results/Dataset100_VesuviusSurface/nnUNetTrainerSkeletonRecallCascadeLastLayers_10epochs__nnUNetResEncUNetMPlans__3d_cascade_fullres/fold_0/validation \
+    --output out/b5 --labels $VESUVIUS_DATA_ROOT/train_labels
 ```
 
 Applied on top of the already-deployed, unconditional 1st-place pp output (not an
 oracle-gated intermediate — see `docs/decisions.md` decision 21 for a real methodology bug
-caught and fixed while validating this): **0.5683 → 0.5691 (+0.0009)**, full 129-case LOSO,
-32/129 accepted. Standalone (no pp): 0.5671 → 0.5682 (+0.0011), 40/129 accepted, mean
-accepted-case gain +0.0035 vs. mean rejected-case would-be loss -0.0083 — a real,
-well-behaved signal. Applied unconditionally (no gate) is a net negative either way; the
-gate is doing real work, not formality.
+caught and fixed while validating this): our line **0.5683 → 0.5691 (+0.0009)**, full
+129-case LOSO, 32/129 accepted. Standalone (no pp): 0.5671 → 0.5682 (+0.0011), 40/129
+accepted, mean accepted-case gain +0.0035 vs. mean rejected-case would-be loss -0.0083 — a
+real, well-behaved signal. Applied unconditionally (no gate) is a net negative either way;
+the gate is doing real work, not formality.
+
+arunodhayan line: 129/129 cases have candidate bridges, but only 1/129 accepted — net
+0.7363 → 0.7363 (+0.0000), same net-neutral shape as unmerge on this line. Not a
+contradiction: this line's control predictions already have far less fragmentation
+(`voi_split` 0.85 vs. our own line's 1.4-1.9), so there's little for this specific
+technique to fix — it targets exactly the failure mode step 6 diagnosed on our own line,
+and correctly finds little of it on the other.
 
 ## Repo map
 
