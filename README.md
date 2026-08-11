@@ -23,12 +23,6 @@ lot (#674→#345) while the private rank barely moves (#122→#126), the same pu
 private-mixed pattern the local-LOSO ablations below already predicted before either
 submission was made.
 
-*(Track B's fine-tuned-checkpoint line scores higher in raw Kaggle points — 0.62410 private,
-row B1 below — but that submission fine-tunes arunodhayan's public checkpoint rather than
-this project's own from-scratch model, and was never itself checked against the frozen
-leaderboard. The table above is specifically Track A's own, fully-trained-from-scratch
-result.)*
-
 ### Local LOSO experimentation trail
 
 The leaderboard result above is the end point of the experimentation below — every stage
