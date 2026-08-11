@@ -14,6 +14,7 @@ dependencies:
   - matplotlib
   - pillow
   - opencv
+  - scikit-image
   - jupyter
   - nbconvert
   - ipykernel
